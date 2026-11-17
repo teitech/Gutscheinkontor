@@ -38,7 +38,7 @@ if not _app_logger.handlers:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings.validate()  # ohne gültigen SECRET_KEY startet die App nicht
-    init_db()
+    init_db(clean_tmp=True)
     # Erinnerungen prüft ein Hintergrundlauf im selben Prozess (die App läuft mit einem Worker).
     # Ebenso die täglichen Backups.
     stop = asyncio.Event()

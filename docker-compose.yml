@@ -1,20 +1,29 @@
 # ACHTUNG: Privates Projekt (Vibe-Coding), Nutzung auf eigene Gefahr.
-# Frühe Entwicklungsphase, noch kein Login und keine Gutscheinverwaltung.
 #
-# Start:  cp .env.example .env  &&  docker compose up -d
+# Start:
+#   cp .env.example .env     # dann SECRET_KEY und BASE_URL eintragen (siehe Kommentare dort)
+#   docker compose up -d
+#
+# Das Image kommt von der GitHub Container Registry. Zum Selbstbauen die Zeile "build: ." aktivieren
+# und "docker compose up -d --build" nutzen. Mit GK_IMAGE in .env lässt sich eine feste Version
+# festlegen, z. B. GK_IMAGE=ghcr.io/teitech/gutscheinkontor:1.0.0
 services:
   gutscheinkontor:
-    image: ghcr.io/teitech/gutscheinkontor:latest
-    # Zum lokalen Bauen statt Image laden:
+    image: ${GK_IMAGE:-ghcr.io/teitech/gutscheinkontor:latest}
     # build: .
     container_name: gutscheinkontor
     restart: unless-stopped
     env_file: .env
     volumes:
-      - ./data:/data
-    # ./data enthält Datenbank, Anhänge und die täglichen Backups: außerhalb zusätzlich sichern!
+      # Benanntes Volume: funktioniert ohne Rechte-Probleme. Es enthält Datenbank, Anhänge und die
+      # täglichen Backups und muss zusätzlich außerhalb gesichert werden (siehe README, "Backups").
+      #
+      # Alternative Bind-Mount, wenn du den Ordner selbst sehen willst: Ordner vorher anlegen und dem
+      # Container-Benutzer geben (mkdir data && sudo chown 10001:10001 data), dann statt der Zeile
+      # darunter "./data:/data" eintragen.
+      - gutscheinkontor-data:/data
     # Nur an localhost binden, wenn ein Reverse Proxy auf demselben Host läuft.
-    # Läuft der Proxy im Docker-Netzwerk, ports weglassen und "expose" nutzen.
+    # Läuft der Proxy im selben Docker-Netzwerk, "ports" weglassen und stattdessen "expose" nutzen.
     ports:
       - "127.0.0.1:8000:8000"
     security_opt:
@@ -24,3 +33,7 @@ services:
     read_only: true
     tmpfs:
       - /tmp
+
+volumes:
+  gutscheinkontor-data:
+    name: gutscheinkontor-data
