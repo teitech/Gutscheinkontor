@@ -57,11 +57,19 @@ class Settings:
     reminder_hour: int = 8
     # Größte erlaubte Import-Datei (ZIP mit Anhängen) in MB.
     max_import_mb: int = 200
+    # Automatische Backups im Datenverzeichnis: täglich ab dieser Uhrzeit, die letzten N behalten.
+    backups_enabled: bool = True
+    backup_keep: int = 7
+    backup_hour: int = 3
     repo_url: str = "https://github.com/teitech/Gutscheinkontor"
 
     @property
     def max_import_bytes(self) -> int:
         return self.max_import_mb * 1024 * 1024
+
+    @property
+    def backups_dir(self) -> str:
+        return str(Path(self.data_dir) / "backups")
 
     @property
     def max_upload_bytes(self) -> int:
@@ -114,6 +122,10 @@ class Settings:
             raise RuntimeError("REMINDER_HOUR muss zwischen 0 und 23 liegen.")
         if not 1 <= self.max_import_mb <= 2000:
             raise RuntimeError("MAX_IMPORT_MB muss zwischen 1 und 2000 liegen.")
+        if not 1 <= self.backup_keep <= 365:
+            raise RuntimeError("BACKUP_KEEP muss zwischen 1 und 365 liegen.")
+        if not 0 <= self.backup_hour <= 23:
+            raise RuntimeError("BACKUP_HOUR muss zwischen 0 und 23 liegen.")
 
 
 @lru_cache
@@ -140,4 +152,8 @@ def get_settings() -> Settings:
         reminder_days=_parse_days(os.environ.get("REMINDER_DAYS", "30,7,1")),
         reminder_hour=int(os.environ.get("REMINDER_HOUR") or 8),
         max_import_mb=int(os.environ.get("MAX_IMPORT_MB") or 200),
+        backups_enabled=os.environ.get("BACKUPS_ENABLED", "1").strip().lower()
+        not in ("0", "false", "no", "off"),
+        backup_keep=int(os.environ.get("BACKUP_KEEP") or 7),
+        backup_hour=int(os.environ.get("BACKUP_HOUR") or 3),
     )

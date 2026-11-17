@@ -12,6 +12,7 @@ services:
     env_file: .env
     volumes:
       - ./data:/data
+    # ./data enthält Datenbank, Anhänge und die täglichen Backups: außerhalb zusätzlich sichern!
     # Nur an localhost binden, wenn ein Reverse Proxy auf demselben Host läuft.
     # Läuft der Proxy im Docker-Netzwerk, ports weglassen und "expose" nutzen.
     ports:

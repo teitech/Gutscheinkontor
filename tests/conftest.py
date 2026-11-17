@@ -11,6 +11,7 @@ os.environ["BASE_URL"] = "http://testserver"
 os.environ.pop("SETUP_TOKEN", None)
 # Der Hintergrundlauf für Erinnerungen bleibt in Tests aus. Tests rufen run_once() selbst auf.
 os.environ["REMINDERS_ENABLED"] = "0"
+os.environ["BACKUPS_ENABLED"] = "0"  # ebenso der Backup-Lauf: Tests rufen create_backup() selbst auf
 
 import pyotp  # noqa: E402
 import pytest  # noqa: E402
@@ -52,6 +53,14 @@ def client(clock):
     if attachments_dir.exists():
         for leftover in attachments_dir.iterdir():
             leftover.unlink()
+    # Backups und Wiederherstellungs-Reste aus früheren Tests entfernen.
+    import shutil
+    data_dir = Path(get_settings().data_dir)
+    shutil.rmtree(get_settings().backups_dir, ignore_errors=True)
+    for leftover in data_dir.glob("restore-undo-*"):
+        shutil.rmtree(leftover, ignore_errors=True)
+    for leftover in data_dir.glob(".restore-staging-*"):
+        shutil.rmtree(leftover, ignore_errors=True)
     with TestClient(app, follow_redirects=False) as c:
         yield c
 

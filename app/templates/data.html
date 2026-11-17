@@ -63,5 +63,37 @@
     <div class="actions"><button class="btn" type="submit">{{ _('Importieren') }}</button></div>
   </form>
   <p class="muted">{{ _('Der Import fügt nur hinzu. Bestehende Gutscheine werden nie verändert oder gelöscht. Es werden nur Exporte des Gutscheinkontors angenommen, höchstens') }} {{ max_import_mb }} MB.</p>
+
+  {% if is_admin %}
+  <h2>{{ _('Automatische Backups') }}</h2>
+  {% if backup_created %}<p class="alert alert-info" role="status">{{ _('Das Backup wurde erstellt.') }}</p>{% endif %}
+  {% if backup_error %}<p class="alert" role="alert">{{ _('Das letzte automatische Backup ist fehlgeschlagen:') }} {{ backup_error }}</p>{% endif %}
+  {% if backups_enabled %}
+  <p class="muted">{{ _('Täglich ab') }} {{ backup_hour }}:00 {{ _('Uhr wird ein Backup angelegt, die letzten') }} {{ backup_keep }} {{ _('bleiben erhalten.') }}</p>
+  {% else %}
+  <p class="alert alert-warn">{{ _('Automatische Backups sind ausgeschaltet (BACKUPS_ENABLED).') }}</p>
+  {% endif %}
+  {% if backups %}
+  <ul class="attachments">
+    {% for b in backups %}
+    <li>
+      <div class="attachment-info"><a href="/backups/{{ b.name }}">{{ b.created }}</a> <span class="muted">{{ b.size }}</span></div>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">{{ _('Noch kein Backup vorhanden.') }}</p>
+  {% endif %}
+  <form method="post" action="/backups/create" class="actions">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <button class="btn btn-secondary" type="submit">{{ _('Jetzt ein Backup erstellen') }}</button>
+  </form>
+  <p class="alert alert-warn">{{ _('Ein Backup enthält die ganze Datenbank mit Konten und verschlüsselten Geheimnissen und lässt sich nur mit dem passenden SECRET_KEY nutzen. Die Backups liegen im selben Volume wie die Daten und schützen nicht vor dem Verlust des Datenträgers. Sichere das Datenverzeichnis zusätzlich außerhalb.') }}</p>
+  <p class="muted">{{ _('Wiederherstellen geht nur bei gestoppter App, auf der Kommandozeile:') }}</p>
+  <pre class="code-block">docker compose stop
+docker compose run --rm gutscheinkontor \
+  python -m app.cli restore-backup DATEINAME --yes
+docker compose up -d</pre>
+  {% endif %}
 </section>
 {% endblock %}

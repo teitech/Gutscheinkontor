@@ -8,7 +8,7 @@ from fastapi.responses import Response, StreamingResponse
 from starlette.concurrency import run_in_threadpool
 from starlette.datastructures import UploadFile
 
-from . import dates, transfer
+from . import backups, dates, transfer
 from .config import get_settings
 from .db import get_db
 from .ratelimit import limiter
@@ -28,10 +28,27 @@ def _page(request: Request, db: sqlite3.Connection, status_code: int = 200, **ex
         "SELECT (SELECT COUNT(*) FROM vouchers) AS vouchers, "
         "(SELECT COUNT(*) FROM voucher_attachments) AS files"
     ).fetchone()
+    user = getattr(request.state, "user", None)
+    is_admin = bool(user and user["is_admin"])
     return render(
         request, "data.html", status_code=status_code, voucher_count=counts["vouchers"],
-        file_count=counts["files"], max_import_mb=settings.max_import_mb, **extra,
+        file_count=counts["files"], max_import_mb=settings.max_import_mb,
+        is_admin=is_admin,
+        backups=[
+            {"name": b.name, "created": b.created.strftime("%d.%m.%Y %H:%M"),
+             "size": _size_text(b.size_bytes)}
+            for b in backups.list_backups()
+        ] if is_admin else [],
+        backups_enabled=settings.backups_enabled, backup_keep=settings.backup_keep,
+        backup_hour=settings.backup_hour, backup_error=backups.status.last_error,
+        backup_created=request.query_params.get("backup") == "1", **extra,
     )
+
+
+def _size_text(size: int) -> str:
+    if size < 1024 * 1024:
+        return f"{max(1, round(size / 1024))} KB"
+    return f"{size / (1024 * 1024):.1f}".replace(".", ",") + " MB"
 
 
 def _iter_and_close(file, chunk: int = 1024 * 1024):

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import secrets
 from contextlib import asynccontextmanager
 
@@ -10,10 +11,11 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from . import reminders, security
+from . import backups, reminders, security
 from .config import get_settings
 from .db import init_db
-from .routes_auth import require_active, router as auth_router
+from .routes_auth import router as auth_router
+from .routes_backups import router as backups_router
 from .routes_reset import router as reset_router
 from .routes_settings import router as settings_router
 from .routes_transfer import router as transfer_router
@@ -22,19 +24,33 @@ from .templating import BASE_DIR, Redirect, render
 
 settings = get_settings()
 
+# Uvicorn zeigt nur seine eigenen Meldungen. Damit Betreiber auch "Backup erstellt" und Fehler der
+# App im Container-Log sehen, bekommt der App-Logger einen eigenen Handler (ohne Nutzerdaten).
+_app_logger = logging.getLogger("gutscheinkontor")
+if not _app_logger.handlers:
+    _handler = logging.StreamHandler()
+    _handler.setFormatter(logging.Formatter("%(levelname)s:     %(name)s: %(message)s"))
+    _app_logger.addHandler(_handler)
+    _app_logger.setLevel(logging.INFO)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings.validate()  # ohne gültigen SECRET_KEY startet die App nicht
     init_db()
     # Erinnerungen prüft ein Hintergrundlauf im selben Prozess (die App läuft mit einem Worker).
+    # Ebenso die täglichen Backups.
     stop = asyncio.Event()
-    task = asyncio.create_task(reminders.scheduler(stop)) if settings.reminders_enabled else None
+    tasks = []
+    if settings.reminders_enabled:
+        tasks.append(asyncio.create_task(reminders.scheduler(stop)))
+    if settings.backups_enabled:
+        tasks.append(asyncio.create_task(backups.scheduler(stop)))
     try:
         yield
     finally:
         stop.set()
-        if task is not None:
+        for task in tasks:
             await task
 
 
@@ -54,6 +70,7 @@ app.include_router(reset_router)
 app.include_router(voucher_router)
 app.include_router(settings_router)
 app.include_router(transfer_router)
+app.include_router(backups_router)
 
 # Alles kommt von der eigenen Domain. Keine externen Ressourcen (Datenschutz).
 CSP = (

@@ -6,7 +6,28 @@ Gutscheinkontor verwaltet alle Gutscheine an einem Ort und erinnert rechtzeitig 
 
 ## Status
 
-Frühe Entwicklungsphase. Fertig sind das Anwendungsgerüst, die SQLite-Datenbank mit Migrationen und der Login: Ersteinrichtung, Passwort, Zwei-Faktor-Anmeldung (TOTP) mit Wiederherstellungscodes und Abmelden. Ebenfalls fertig: E-Mail-Versand über einen eigenen SMTP-Server, der Passwort-Reset per E-Mail-Link, die Gutscheinverwaltung, die Erinnerungsmails und Import/Export. Noch nicht fertig: Einladungen und automatische Backups.
+Frühe Entwicklungsphase. Fertig sind das Anwendungsgerüst, die SQLite-Datenbank mit Migrationen und der Login: Ersteinrichtung, Passwort, Zwei-Faktor-Anmeldung (TOTP) mit Wiederherstellungscodes und Abmelden. Ebenfalls fertig: E-Mail-Versand über einen eigenen SMTP-Server, der Passwort-Reset per E-Mail-Link, die Gutscheinverwaltung, die Erinnerungsmails, Import/Export und automatische Backups. Noch nicht fertig: Einladungen.
+
+## Backups
+
+Die App legt täglich ab 3 Uhr (`BACKUP_HOUR`) ein Backup unter `data/backups/` an und behält die letzten 7 (`BACKUP_KEEP`). Ein Backup ist ein ZIP mit einem konsistenten Abbild der Datenbank (auch bei laufendem Betrieb) und allen Anhängen. Es wird erst nach einer Integritätsprüfung unter seinem Namen abgelegt und hat die Rechte 600. Administratoren sehen und laden Backups unter „Export / Import“ und können dort jederzeit eines erstellen.
+
+**Wichtig:**
+- Ein Backup enthält die **ganze Datenbank** mit Konten, Passwort-Hashes und verschlüsselten 2FA-Geheimnissen (anders als der Export). Es funktioniert nur mit dem passenden `SECRET_KEY`. Sichere den Schlüssel getrennt von den Daten.
+- Die Backups liegen im selben Volume wie die Daten. Sie schützen vor Bedienfehlern und Datenbankschäden, **nicht vor dem Verlust des Datenträgers**. Sichere `data/` zusätzlich außerhalb, z. B. mit Restic oder Duplicati.
+- Plane den Speicherplatz ein: Anhänge stecken in jedem der 7 Backups. Die App bricht ein Backup ab, wenn der Platz nicht reicht, und zeigt das Administratoren an.
+
+### Wiederherstellen
+
+Nur bei gestoppter App, auf der Kommandozeile:
+
+```bash
+docker compose stop
+docker compose run --rm gutscheinkontor python -m app.cli restore-backup gutscheinkontor-backup-2026-11-17_030000.zip --yes
+docker compose up -d
+```
+
+Vor dem Einspielen prüft die App die Datei (Aufbau, erlaubte Namen, Größe, Integrität der Datenbank, Version) und ob der `SECRET_KEY` zum Backup passt. Sie bricht bei Problemen ab, ohne etwas zu verändern. Der bisherige Stand wird nicht gelöscht, sondern nach `data/restore-undo-<Zeit>/` verschoben. Lösche den Ordner erst, wenn du geprüft hast, dass alles stimmt. Ältere Backups werden beim Einspielen auf die aktuelle Datenbankversion gebracht.
 
 ## Export und Import
 
