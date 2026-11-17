@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Ersteinrichtung') }} – Gutscheinkontor{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>{{ _('Ersteinrichtung') }}</h1>
+  <p class="muted">{{ _('Lege das erste Konto an. Es wird zum Administrator. Im nächsten Schritt richtest du die Zwei-Faktor-Anmeldung ein.') }}</p>
+  {% if error %}<p class="alert" role="alert">{{ error }}</p>{% endif %}
+  <form method="post" action="/setup" class="form">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    {% if needs_token %}
+    <label>{{ _('Einrichtungs-Token') }}
+      <input type="password" name="setup_token" required autocomplete="off">
+    </label>
+    {% endif %}
+    <label>{{ _('Name') }}
+      <input type="text" name="display_name" value="{{ display_name or '' }}" required maxlength="100" autocomplete="name" autofocus>
+    </label>
+    <label>{{ _('E-Mail') }}
+      <input type="email" name="email" value="{{ email or '' }}" required autocomplete="username">
+    </label>
+    <label>{{ _('Passwort (mindestens 12 Zeichen)') }}
+      <input type="password" name="password" required minlength="12" autocomplete="new-password">
+    </label>
+    <label>{{ _('Passwort wiederholen') }}
+      <input type="password" name="password_repeat" required minlength="12" autocomplete="new-password">
+    </label>
+    <button class="btn" type="submit">{{ _('Konto anlegen') }}</button>
+  </form>
+</section>
+{% endblock %}

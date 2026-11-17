@@ -6,15 +6,26 @@ Gutscheinkontor verwaltet alle Gutscheine an einem Ort und erinnert rechtzeitig 
 
 ## Status
 
-Frühe Entwicklungsphase. Es gibt bisher nur das Anwendungsgerüst (Startseite, Health-Check, Dark Mode, Docker). Login und Gutscheinverwaltung folgen.
+Frühe Entwicklungsphase. Fertig sind das Anwendungsgerüst, die SQLite-Datenbank mit Migrationen und der Login: Ersteinrichtung, Passwort, Zwei-Faktor-Anmeldung (TOTP) mit Wiederherstellungscodes und Abmelden. Noch nicht fertig: Passwort-Reset per E-Mail, Einladungen, Gutscheinverwaltung, Erinnerungen, Import/Export.
 
 ## Lokal ausprobieren
 
 ```bash
 python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 .venv/bin/pytest -q
+export SECRET_KEY="$(openssl rand -base64 48)"
 .venv/bin/uvicorn app.main:app --reload
 ```
+
+Beim ersten Aufruf leitet die App auf die Ersteinrichtung weiter. Dort entsteht das Admin-Konto, danach richtest du die Zwei-Faktor-Anmeldung ein.
+
+## Sicherheit
+
+- Passwörter werden mit Argon2id gehasht, mindestens 12 Zeichen.
+- Zwei-Faktor-Anmeldung ist Pflicht. Die TOTP-Geheimnisse liegen verschlüsselt in der Datenbank, die Wiederherstellungscodes nur als Hash.
+- Sitzungen liegen serverseitig. Das Cookie ist `HttpOnly`, `SameSite=Lax` und bei HTTPS `Secure`.
+- CSRF-Schutz auf allen Formularen, Begrenzung von Fehlversuchen beim Login und bei der 2FA.
+- Die App läuft mit genau einem Worker, weil die Fehlversuchs-Zähler im Arbeitsspeicher liegen.
 
 Mit Docker: `cp .env.example .env`, in `docker-compose.yml` die Zeile `build: .` aktivieren und `docker compose up -d --build`.
 

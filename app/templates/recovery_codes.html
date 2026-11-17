@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Wiederherstellungscodes') }} – Gutscheinkontor{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>{{ _('Wiederherstellungscodes') }}</h1>
+  <p class="alert alert-warn">{{ _('Speichere diese Codes jetzt an einem sicheren Ort, zum Beispiel in deinem Passwortmanager. Sie werden nur dieses eine Mal angezeigt. Jeder Code funktioniert genau einmal, falls du dein Authenticator-Gerät verlierst.') }}</p>
+  <ul class="codes">
+    {% for code in codes %}<li><code>{{ code }}</code></li>{% endfor %}
+  </ul>
+  <a class="btn" href="/">{{ _('Ich habe die Codes gespeichert') }}</a>
+</section>
+{% endblock %}

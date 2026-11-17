@@ -12,9 +12,17 @@
 <body>
   <header class="topbar">
     <a class="brand" href="/">Gutscheinkontor</a>
-    <button type="button" class="theme-toggle" id="theme-toggle" aria-label="{{ _('Darstellung wechseln') }}">
-      {{ _('Hell / Dunkel') }}
-    </button>
+    <div class="topbar-actions">
+      <button type="button" class="btn btn-secondary" id="theme-toggle" aria-label="{{ _('Darstellung wechseln') }}">
+        {{ _('Hell / Dunkel') }}
+      </button>
+      {% if user %}
+      <form method="post" action="/logout">
+        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+        <button type="submit" class="btn btn-secondary">{{ _('Abmelden') }}</button>
+      </form>
+      {% endif %}
+    </div>
   </header>
 
   <main class="container">

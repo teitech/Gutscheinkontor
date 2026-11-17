@@ -1,17 +1,29 @@
 """Gutscheinkontor: Einstiegspunkt der Web-App."""
 from __future__ import annotations
 
-from pathlib import Path
+import secrets
+import sqlite3
+from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi import Depends, FastAPI, Request
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 
+from . import security
 from .config import get_settings
+from .db import init_db
+from .routes_auth import require_active, router as auth_router
+from .templating import BASE_DIR, Redirect, render
 
-BASE_DIR = Path(__file__).resolve().parent
 settings = get_settings()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    settings.validate()  # ohne gültigen SECRET_KEY startet die App nicht
+    init_db()
+    yield
+
 
 # Keine API-Doku öffentlich ausliefern: kleinere Angriffsfläche.
 app = FastAPI(
@@ -20,15 +32,11 @@ app = FastAPI(
     docs_url=None,
     redoc_url=None,
     openapi_url=None,
+    lifespan=lifespan,
 )
 
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
-
-templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
-# Vorbereitung für Mehrsprachigkeit: Texte laufen über _(). Vorerst nur Deutsch.
-templates.env.add_extension("jinja2.ext.i18n")
-templates.env.install_null_translations()
-templates.env.globals["settings"] = settings
+app.include_router(auth_router)
 
 # Alles kommt von der eigenen Domain. Keine externen Ressourcen (Datenschutz).
 CSP = (
@@ -38,9 +46,27 @@ CSP = (
 )
 
 
+@app.exception_handler(Redirect)
+async def redirect_handler(request: Request, exc: Redirect):
+    return RedirectResponse(exc.url, status_code=303)
+
+
 @app.middleware("http")
-async def security_headers(request: Request, call_next):
+async def csrf_and_security_headers(request: Request, call_next):
+    # CSRF: Zufalls-Token im Cookie, das Formularfeld enthält den davon abgeleiteten HMAC.
+    token = request.cookies.get(settings.csrf_cookie)
+    fresh = not token or len(token) < 32
+    if fresh:
+        token = secrets.token_urlsafe(32)
+    request.state.csrf = security.csrf_field_value(token)
+
     response = await call_next(request)
+
+    if fresh:
+        response.set_cookie(
+            settings.csrf_cookie, token, httponly=True,
+            secure=settings.secure_cookies, samesite="lax", path="/",
+        )
     response.headers["Content-Security-Policy"] = CSP
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "same-origin"
@@ -48,9 +74,9 @@ async def security_headers(request: Request, call_next):
     return response
 
 
-@app.get("/", response_class=HTMLResponse)
-async def index(request: Request):
-    return templates.TemplateResponse(request, "index.html")
+@app.get("/")
+def index(request: Request, ctx=Depends(require_active)):
+    return render(request, "index.html")
 
 
 @app.get("/health")

@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="card">
-  <h1>{{ _('Willkommen im Gutscheinkontor') }}</h1>
+  <h1>{{ _('Hallo') }} {{ user.display_name }}</h1>
   <p>{{ _('Hier entsteht die zentrale Verwaltung für deine Gutscheine, mit Erinnerung vor dem Ablaufdatum.') }}</p>
-  <p class="muted">{{ _('Die App befindet sich im Aufbau. Login und Gutscheinverwaltung folgen.') }}</p>
+  <p class="muted">{{ _('Die App befindet sich im Aufbau. Die Gutscheinverwaltung folgt.') }}</p>
 </section>
 {% endblock %}

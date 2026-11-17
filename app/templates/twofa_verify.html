@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Zwei-Faktor-Code') }} – Gutscheinkontor{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>{{ _('Zwei-Faktor-Code') }}</h1>
+  <p class="muted">{{ _('Gib den 6-stelligen Code aus deiner Authenticator-App ein. Alternativ funktioniert ein Wiederherstellungscode (einmalig nutzbar).') }}</p>
+  {% if error %}<p class="alert" role="alert">{{ error }}</p>{% endif %}
+  <form method="post" action="/login/2fa" class="form">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <label>{{ _('Code') }}
+      <input type="text" name="code" required autocomplete="one-time-code" autocapitalize="none" spellcheck="false" autofocus>
+    </label>
+    <button class="btn" type="submit">{{ _('Bestätigen') }}</button>
+  </form>
+</section>
+{% endblock %}
