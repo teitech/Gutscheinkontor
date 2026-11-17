@@ -6,7 +6,7 @@ Gutscheinkontor verwaltet alle Gutscheine an einem Ort und erinnert rechtzeitig 
 
 ## Status
 
-Der geplante Umfang von Version 1 ist umgesetzt. Die Tests laufen bei jedem Push in GitHub Actions, dort wird das Image gebaut (amd64 und arm64) und unter amd64 wie im Betrieb gestartet und durchgeprüft. Ein erstes veröffentlichtes Release gibt es noch nicht, bis dahin baust du das Image selbst (siehe unten).
+Der geplante Umfang von Version 1 ist umgesetzt. Die Tests laufen bei jedem Push in GitHub Actions, dort wird das Image gebaut (amd64 und arm64) und unter amd64 wie im Betrieb gestartet und durchgeprüft. Version 0.1.0 ist als Docker-Image veröffentlicht (`ghcr.io/teitech/gutscheinkontor`, amd64 und arm64). Das Projekt ist jung: Rechne mit Ecken und Kanten und lies die Hinweise oben.
 
 ## Funktionen
 
@@ -33,15 +33,17 @@ Trage in der `.env` mindestens ein:
 - `SECRET_KEY`: erzeugen mit `openssl rand -base64 48`. **Sichere ihn getrennt von den Daten.** Ohne ihn sind Gutscheincodes, 2FA-Daten und Backups nicht mehr lesbar.
 - `BASE_URL`: die öffentliche Adresse mit `https://`, z. B. `https://gutscheine.example.de`.
 
-Dann starten. Solange es noch kein veröffentlichtes Image gibt, baust du es selbst: Entferne in `docker-compose.yml` das `#` vor `build: .`.
+Dann starten:
 
 ```bash
-docker compose up -d --build
+docker compose up -d
 ```
+
+Das Image kommt von der GitHub Container Registry. Willst du es selbst bauen, entferne in `docker-compose.yml` das `#` vor `build: .` und starte mit `docker compose up -d --build`.
 
 Die App lauscht auf `127.0.0.1:8000`. Richte deinen Reverse Proxy darauf aus (Beispiele für Caddy, Traefik, nginx und Nginx Proxy Manager in [docs/reverse-proxy.md](docs/reverse-proxy.md)) und öffne die Adresse. Beim ersten Aufruf legst du das Administrator-Konto an und richtest die Zwei-Faktor-Anmeldung ein.
 
-**Aktualisieren:** `git pull`, dann `docker compose up -d --build`. Mit einem veröffentlichten Image genügt `docker compose pull && docker compose up -d`. Die Datenbank wird beim Start automatisch auf den neuen Stand gebracht. Erstelle vorher ein Backup (Export / Import → Jetzt ein Backup erstellen).
+**Aktualisieren:** `docker compose pull && docker compose up -d`. Willst du eine feste Version, trage in der `.env` `GK_IMAGE=ghcr.io/teitech/gutscheinkontor:0.1.0` ein. Die Datenbank wird beim Start automatisch auf den neuen Stand gebracht. Erstelle vorher ein Backup (Export / Import → Jetzt ein Backup erstellen).
 
 **Daten:** Datenbank, Anhänge und Backups liegen im benannten Docker-Volume `gutscheinkontor-data`. Ein Bind-Mount ist möglich (Hinweise in `docker-compose.yml`), dann muss der Ordner dem Benutzer 10001 gehören, sonst bricht die App beim Start mit einer klaren Meldung ab.
 
@@ -159,7 +161,7 @@ Beim ersten Aufruf leitet die App auf die Ersteinrichtung weiter. Die GitHub-Pip
 
 ### Release veröffentlichen
 
-Ein Tag wie `v1.0.0` löst `.github/workflows/release.yml` aus. Die Pipeline führt die Tests aus, baut das Image für amd64 und arm64, veröffentlicht es unter `ghcr.io/teitech/gutscheinkontor` (mit den Tags `1.0.0`, `1.0` und bei stabilen Versionen `latest`) und legt ein GitHub-Release an. Prüfe nach der ersten Veröffentlichung unter den Paket-Einstellungen auf GitHub, dass das Paket öffentlich ist, sonst kann niemand es ohne Anmeldung laden.
+Ein Tag wie `v1.0.0` löst `.github/workflows/release.yml` aus. Die Pipeline führt die Tests aus, baut das Image für amd64 und arm64, veröffentlicht es unter `ghcr.io/teitech/gutscheinkontor` (mit den Tags `1.0.0`, `1.0` und bei stabilen Versionen `latest`) und legt ein GitHub-Release an. Bei `v0.1.0` war das Paket nach der Veröffentlichung ohne Anmeldung abrufbar.
 
 ## Lizenz
 
