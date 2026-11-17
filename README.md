@@ -6,7 +6,17 @@ Gutscheinkontor verwaltet alle Gutscheine an einem Ort und erinnert rechtzeitig 
 
 ## Status
 
-Frühe Planungsphase. Der Funktionsumfang steht im Plan, die Umsetzung hat noch nicht begonnen.
+Frühe Entwicklungsphase. Es gibt bisher nur das Anwendungsgerüst (Startseite, Health-Check, Dark Mode, Docker). Login und Gutscheinverwaltung folgen.
+
+## Lokal ausprobieren
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
+.venv/bin/pytest -q
+.venv/bin/uvicorn app.main:app --reload
+```
+
+Mit Docker: `cp .env.example .env`, in `docker-compose.yml` die Zeile `build: .` aktivieren und `docker compose up -d --build`.
 
 ## Geplante Funktionen (Version 1)
 

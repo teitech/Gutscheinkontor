@@ -1,0 +1,25 @@
+# ACHTUNG: Privates Projekt (Vibe-Coding), Nutzung auf eigene Gefahr.
+# Frühe Entwicklungsphase, noch kein Login und keine Gutscheinverwaltung.
+#
+# Start:  cp .env.example .env  &&  docker compose up -d
+services:
+  gutscheinkontor:
+    image: ghcr.io/teitech/gutscheinkontor:latest
+    # Zum lokalen Bauen statt Image laden:
+    # build: .
+    container_name: gutscheinkontor
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./data:/data
+    # Nur an localhost binden, wenn ein Reverse Proxy auf demselben Host läuft.
+    # Läuft der Proxy im Docker-Netzwerk, ports weglassen und "expose" nutzen.
+    ports:
+      - "127.0.0.1:8000:8000"
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
