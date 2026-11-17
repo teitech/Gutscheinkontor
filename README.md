@@ -6,7 +6,18 @@ Gutscheinkontor verwaltet alle Gutscheine an einem Ort und erinnert rechtzeitig 
 
 ## Status
 
-Frühe Entwicklungsphase. Fertig sind das Anwendungsgerüst, die SQLite-Datenbank mit Migrationen und der Login: Ersteinrichtung, Passwort, Zwei-Faktor-Anmeldung (TOTP) mit Wiederherstellungscodes und Abmelden. Ebenfalls fertig: E-Mail-Versand über einen eigenen SMTP-Server, der Passwort-Reset per E-Mail-Link, die Gutscheinverwaltung und die Erinnerungsmails. Noch nicht fertig: Einladungen, Import/Export, Backups.
+Frühe Entwicklungsphase. Fertig sind das Anwendungsgerüst, die SQLite-Datenbank mit Migrationen und der Login: Ersteinrichtung, Passwort, Zwei-Faktor-Anmeldung (TOTP) mit Wiederherstellungscodes und Abmelden. Ebenfalls fertig: E-Mail-Versand über einen eigenen SMTP-Server, der Passwort-Reset per E-Mail-Link, die Gutscheinverwaltung, die Erinnerungsmails und Import/Export. Noch nicht fertig: Einladungen und automatische Backups.
+
+## Export und Import
+
+Unter „Export / Import“ gibt es zwei Exporte:
+
+- **ZIP (Sicherung):** Alle Gutscheine mit Schlagwörtern und Anhängen als `export.json` plus Dateien. Lässt sich wieder importieren, auch in eine andere Instanz.
+- **CSV (Tabelle):** Zum Ansehen in Excel oder LibreOffice (UTF-8 mit BOM, Semikolon, deutsches Zahlenformat), ohne Anhänge, nicht importierbar. Zellen, die mit `=`, `+`, `-` oder `@` beginnen, werden entschärft, damit Tabellenprogramme sie nicht als Formel ausführen.
+
+**Die Exporte enthalten standardmäßig die Gutscheincodes im Klartext**, damit eine Sicherung auch in einer Instanz mit anderem `SECRET_KEY` funktioniert. Bewahre sie sicher auf. Du kannst die Codes beim Export weglassen. Nutzerkonten, Passwörter und 2FA-Daten werden nie exportiert. Personen werden über ihre E-Mail-Adresse zugeordnet. Gibt es sie in der Ziel-Instanz nicht, ist der Gutschein danach niemandem zugeordnet.
+
+Der Import nimmt nur dieses ZIP-Format an und **fügt nur hinzu**: Bestehende Gutscheine werden nie verändert oder gelöscht. Duplikate (gleicher Name, Code, Ablaufdatum und Wert) werden auf Wunsch übersprungen, und ein Probelauf zeigt vorab, was passieren würde. Die Datei wird wie eine fremde Eingabe behandelt: Jeder Eintrag durchläuft dieselbe Prüfung wie ein Formular, jeder Anhang dieselbe Prüfung wie ein Upload, und Größe, Anzahl und entpackter Umfang sind begrenzt (`MAX_IMPORT_MB`). Unlesbare Einträge werden übersprungen und im Bericht aufgeführt.
 
 ## Erinnerungen
 

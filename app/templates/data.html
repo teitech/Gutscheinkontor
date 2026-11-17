@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Daten') }} – Gutscheinkontor{% endblock %}
+{% block content %}
+<p><a href="/">← {{ _('Alle Gutscheine') }}</a></p>
+
+<section class="card narrow wide">
+  <h1>{{ _('Daten exportieren und importieren') }}</h1>
+  <p class="muted">{{ voucher_count }} {{ _('Gutscheine') }}, {{ file_count }} {{ _('Anhänge') }}.</p>
+
+  <p class="alert alert-warn">{{ _('Ein Export enthält standardmäßig die Gutscheincodes im Klartext. Bewahre die Datei sicher auf und gib sie nicht weiter. Wer sie hat, kann die Gutscheine einlösen.') }}</p>
+
+  <h2>{{ _('Export') }}</h2>
+  <form method="post" action="/data/export.zip" class="form">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <label class="check">
+      <input type="checkbox" name="include_codes" value="on" checked>
+      <span>{{ _('Gutscheincodes mit exportieren') }}</span>
+    </label>
+    <div class="actions">
+      <button class="btn" type="submit">{{ _('Sicherung herunterladen (ZIP)') }}</button>
+      <button class="btn btn-secondary" type="submit" formaction="/data/export.csv">{{ _('Tabelle herunterladen (CSV)') }}</button>
+    </div>
+  </form>
+  <p class="muted">{{ _('Das ZIP enthält alle Gutscheine mit Schlagwörtern und Anhängen und lässt sich wieder importieren. Die CSV-Tabelle ist zum Ansehen in Excel oder LibreOffice gedacht, ohne Anhänge, und lässt sich nicht importieren. Nutzerkonten und Passwörter werden nie exportiert.') }}</p>
+
+  <h2>{{ _('Import') }}</h2>
+  {% if error %}<p class="alert" role="alert">{{ error }}</p>{% endif %}
+
+  {% if report %}
+  <div class="alert alert-info" role="status">
+    <strong>{% if report.dry_run %}{{ _('Probelauf, es wurde nichts gespeichert.') }}{% else %}{{ _('Import abgeschlossen.') }}{% endif %}</strong>
+    <ul class="report">
+      <li>{{ report.imported }} {% if report.dry_run %}{{ _('Gutscheine würden hinzugefügt') }}{% else %}{{ _('Gutscheine hinzugefügt') }}{% endif %}, {{ report.attachments_imported }} {{ _('Anhänge') }}</li>
+      {% if report.duplicates %}<li>{{ report.duplicates }} {{ _('Duplikate übersprungen') }}</li>{% endif %}
+      {% if report.invalid_count %}<li>{{ report.invalid_count }} {{ _('Einträge unlesbar und übersprungen') }}</li>{% endif %}
+    </ul>
+  </div>
+  {% if report.invalid %}
+  <h3>{{ _('Übersprungene Einträge') }}</h3>
+  <ul class="report">{% for line in report.invalid %}<li>{{ line }}</li>{% endfor %}</ul>
+  {% if report.invalid_count > report.invalid|length %}<p class="muted">… {{ _('und weitere') }}</p>{% endif %}
+  {% endif %}
+  {% if report.warnings %}
+  <h3>{{ _('Hinweise') }}</h3>
+  <ul class="report">{% for line in report.warnings %}<li>{{ line }}</li>{% endfor %}</ul>
+  {% if report.warning_count > report.warnings|length %}<p class="muted">… {{ _('und weitere') }}</p>{% endif %}
+  {% endif %}
+  {% endif %}
+
+  <form method="post" action="/data/import" enctype="multipart/form-data" class="form">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <label>{{ _('Export-Datei (ZIP)') }}
+      <input type="file" name="file" accept=".zip,application/zip" required>
+    </label>
+    <label class="check">
+      <input type="checkbox" name="skip_duplicates" value="on" checked>
+      <span>{{ _('Duplikate überspringen (gleicher Name, Code, Datum und Wert)') }}</span>
+    </label>
+    <label class="check">
+      <input type="checkbox" name="dry_run" value="on">
+      <span>{{ _('Nur prüfen, nichts speichern (Probelauf)') }}</span>
+    </label>
+    <div class="actions"><button class="btn" type="submit">{{ _('Importieren') }}</button></div>
+  </form>
+  <p class="muted">{{ _('Der Import fügt nur hinzu. Bestehende Gutscheine werden nie verändert oder gelöscht. Es werden nur Exporte des Gutscheinkontors angenommen, höchstens') }} {{ max_import_mb }} MB.</p>
+</section>
+{% endblock %}

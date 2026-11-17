@@ -309,3 +309,6 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; word-break: 
 .check { display: flex !important; align-items: center; gap: 0.6rem; font-weight: 400 !important; }
 .check input { width: 1.4rem !important; min-height: 1.4rem !important; accent-color: var(--accent); }
 .card h2 { font-size: 1.15rem; margin-top: 1.5rem; }
+
+.report { margin: 0.5rem 0; padding-left: 1.25rem; }
+.card h3 { font-size: 1rem; margin-top: 1rem; }

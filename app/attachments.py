@@ -45,7 +45,7 @@ def detect_type(head: bytes) -> Optional[str]:
     return None
 
 
-_EXTENSIONS = {
+EXTENSIONS = {
     "application/pdf": ".pdf",
     "image/png": ".png",
     "image/jpeg": ".jpg",
@@ -58,7 +58,7 @@ def clean_filename(name: str, content_type: str) -> str:
     base = re.split(r"[\\/]", name or "")[-1]
     base = "".join(c for c in base if c.isprintable() and c not in '<>:"|?*')
     base = base.strip(" .")[:100]
-    return base or "anhang" + _EXTENSIONS[content_type]
+    return base or "anhang" + EXTENSIONS[content_type]
 
 
 def storage_dir() -> Path:
@@ -82,6 +82,43 @@ def delete_files(stored_names: Iterable[str]) -> None:
 def _has_active_pdf_content(path: Path) -> bool:
     data = path.read_bytes()
     return any(marker in data for marker in _PDF_ACTIVE_CONTENT)
+
+
+def _check_saved(path: Path, content_type: str, size: int) -> None:
+    """Prüfungen, die erst mit der fertigen Datei möglich sind."""
+    if size == 0:
+        raise UploadError("Die Datei ist leer.")
+    if content_type == "application/pdf" and _has_active_pdf_content(path):
+        raise UploadError("Dieses PDF enthält aktive Inhalte (z. B. JavaScript) und wird abgelehnt.")
+
+
+def save_stream(fileobj, filename: str, max_bytes: int) -> Saved:
+    """Wie save_upload, aber für synchrone Datenströme (z. B. Dateien aus einem ZIP)."""
+    head = fileobj.read(16)
+    content_type = detect_type(head)
+    if content_type is None:
+        raise UploadError("Erlaubt sind nur PDF-, PNG-, JPEG- und WebP-Dateien.")
+
+    storage_dir().mkdir(parents=True, exist_ok=True)
+    stored_name = secrets.token_hex(16)
+    path = storage_dir() / stored_name
+    size = len(head)
+    try:
+        with open(path, "xb") as out:
+            out.write(head)
+            while True:
+                chunk = fileobj.read(CHUNK)
+                if not chunk:
+                    break
+                size += len(chunk)
+                if size > max_bytes:
+                    raise UploadError(f"Die Datei ist größer als {max_bytes // (1024 * 1024)} MB.")
+                out.write(chunk)
+        _check_saved(path, content_type, size)
+    except BaseException:
+        path.unlink(missing_ok=True)
+        raise
+    return Saved(stored_name, clean_filename(filename or "", content_type), content_type, size)
 
 
 async def save_upload(upload, max_bytes: int) -> Saved:
@@ -108,10 +145,7 @@ async def save_upload(upload, max_bytes: int) -> Saved:
                         f"Die Datei ist größer als {max_bytes // (1024 * 1024)} MB."
                     )
                 out.write(chunk)
-        if size == 0:
-            raise UploadError("Die Datei ist leer.")
-        if content_type == "application/pdf" and _has_active_pdf_content(path):
-            raise UploadError("Dieses PDF enthält aktive Inhalte (z. B. JavaScript) und wird abgelehnt.")
+        _check_saved(path, content_type, size)
     except BaseException:
         path.unlink(missing_ok=True)
         raise

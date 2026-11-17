@@ -55,7 +55,13 @@ class Settings:
     reminders_enabled: bool = True
     reminder_days: Tuple[int, ...] = (30, 7, 1)
     reminder_hour: int = 8
+    # Größte erlaubte Import-Datei (ZIP mit Anhängen) in MB.
+    max_import_mb: int = 200
     repo_url: str = "https://github.com/teitech/Gutscheinkontor"
+
+    @property
+    def max_import_bytes(self) -> int:
+        return self.max_import_mb * 1024 * 1024
 
     @property
     def max_upload_bytes(self) -> int:
@@ -106,6 +112,8 @@ class Settings:
             raise RuntimeError("REMINDER_DAYS braucht Werte zwischen 1 und 365, z. B. 30,7,1.")
         if not 0 <= self.reminder_hour <= 23:
             raise RuntimeError("REMINDER_HOUR muss zwischen 0 und 23 liegen.")
+        if not 1 <= self.max_import_mb <= 2000:
+            raise RuntimeError("MAX_IMPORT_MB muss zwischen 1 und 2000 liegen.")
 
 
 @lru_cache
@@ -131,4 +139,5 @@ def get_settings() -> Settings:
         not in ("0", "false", "no", "off"),
         reminder_days=_parse_days(os.environ.get("REMINDER_DAYS", "30,7,1")),
         reminder_hour=int(os.environ.get("REMINDER_HOUR") or 8),
+        max_import_mb=int(os.environ.get("MAX_IMPORT_MB") or 200),
     )
