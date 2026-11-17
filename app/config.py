@@ -5,6 +5,7 @@ import os
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
+from typing import Tuple
 from zoneinfo import ZoneInfo
 
 SMTP_SECURITY_MODES = ("starttls", "ssl", "none")
@@ -16,6 +17,15 @@ def _read_env(name: str) -> str:
     if path:
         return Path(path).read_text(encoding="utf-8").strip()
     return os.environ.get(name, "").strip()
+
+
+def _parse_days(text: str) -> Tuple[int, ...]:
+    """'30, 7, 1' -> (30, 7, 1). Ungültiges ergibt ein leeres Tupel, validate() meldet das."""
+    try:
+        days = {int(part) for part in text.replace(";", ",").split(",") if part.strip()}
+    except ValueError:
+        return ()
+    return tuple(sorted(days, reverse=True))
 
 
 @dataclass(frozen=True)
@@ -41,6 +51,10 @@ class Settings:
     timezone: str = "Europe/Berlin"
     # Größtes erlaubtes Anhang-Format in MB. Der Reverse Proxy muss gleich große Uploads erlauben.
     max_upload_mb: int = 10
+    # Erinnerungsmails: so viele Tage vor Ablauf, ab dieser Uhrzeit (in der Zeitzone oben).
+    reminders_enabled: bool = True
+    reminder_days: Tuple[int, ...] = (30, 7, 1)
+    reminder_hour: int = 8
     repo_url: str = "https://github.com/teitech/Gutscheinkontor"
 
     @property
@@ -88,6 +102,10 @@ class Settings:
             raise RuntimeError(f"TIMEZONE ist unbekannt: {self.timezone}") from exc
         if not 1 <= self.max_upload_mb <= 200:
             raise RuntimeError("MAX_UPLOAD_MB muss zwischen 1 und 200 liegen.")
+        if not self.reminder_days or not all(1 <= d <= 365 for d in self.reminder_days):
+            raise RuntimeError("REMINDER_DAYS braucht Werte zwischen 1 und 365, z. B. 30,7,1.")
+        if not 0 <= self.reminder_hour <= 23:
+            raise RuntimeError("REMINDER_HOUR muss zwischen 0 und 23 liegen.")
 
 
 @lru_cache
@@ -109,4 +127,8 @@ def get_settings() -> Settings:
         smtp_security=security,
         timezone=os.environ.get("TIMEZONE", "Europe/Berlin").strip(),
         max_upload_mb=int(os.environ.get("MAX_UPLOAD_MB") or 10),
+        reminders_enabled=os.environ.get("REMINDERS_ENABLED", "1").strip().lower()
+        not in ("0", "false", "no", "off"),
+        reminder_days=_parse_days(os.environ.get("REMINDER_DAYS", "30,7,1")),
+        reminder_hour=int(os.environ.get("REMINDER_HOUR") or 8),
     )

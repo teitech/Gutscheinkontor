@@ -6,7 +6,18 @@ Gutscheinkontor verwaltet alle Gutscheine an einem Ort und erinnert rechtzeitig 
 
 ## Status
 
-Frühe Entwicklungsphase. Fertig sind das Anwendungsgerüst, die SQLite-Datenbank mit Migrationen und der Login: Ersteinrichtung, Passwort, Zwei-Faktor-Anmeldung (TOTP) mit Wiederherstellungscodes und Abmelden. Ebenfalls fertig: E-Mail-Versand über einen eigenen SMTP-Server, der Passwort-Reset per E-Mail-Link und die Gutscheinverwaltung. Noch nicht fertig: Einladungen, Erinnerungsmails, Import/Export, Backups.
+Frühe Entwicklungsphase. Fertig sind das Anwendungsgerüst, die SQLite-Datenbank mit Migrationen und der Login: Ersteinrichtung, Passwort, Zwei-Faktor-Anmeldung (TOTP) mit Wiederherstellungscodes und Abmelden. Ebenfalls fertig: E-Mail-Versand über einen eigenen SMTP-Server, der Passwort-Reset per E-Mail-Link, die Gutscheinverwaltung und die Erinnerungsmails. Noch nicht fertig: Einladungen, Import/Export, Backups.
+
+## Erinnerungen
+
+Die App schickt Mails vor dem Ablauf, standardmäßig 30, 7 und 1 Tag vorher (`REMINDER_DAYS`), ab 8 Uhr morgens (`REMINDER_HOUR`, Zeitzone `TIMEZONE`). Sie braucht dafür den SMTP-Versand und läuft als Hintergrundaufgabe im selben Prozess. Unter „Einstellungen“ gibt es eine Testmail, mit der du den Versand prüfst.
+
+- **Eine Mail pro Stufe:** Für jeden Gutschein, jede Person und jede Stufe kommt höchstens eine Mail. Mehrere Gutscheine für dieselbe Person landen in einer Sammelmail.
+- **Nach einer Pause:** War die App aus, kommt nach dem Start nur die aktuelle Stufe, kein Schwall verpasster Mails.
+- **Gerade angelegt:** Stufen, die schon vorbei waren, als du das Ablaufdatum gesetzt hast, entfallen. Ein Gutschein, den du mit 20 Tagen Restlaufzeit anlegst, löst keine 30-Tage-Mail aus. Ändert sich das Ablaufdatum, zählen die Stufen für das neue Datum von vorn.
+- **Wer bekommt sie:** Ist ein Gutschein einer Person zugeordnet, nur diese. Sonst alle Nutzer. Jeder kann Erinnerungen für sich unter „Einstellungen“ abschalten.
+- **Keine Erinnerung** gibt es für eingelöste, archivierte und abgelaufene Gutscheine und für solche ohne Ablaufdatum.
+- **Datenschutz:** Der Gutscheincode steht nie in der Mail, nur Name, Datum, Restwert und ein Link. Schlägt der Versand fehl, versucht die App es alle 30 Minuten erneut.
 
 ## Gutscheine
 

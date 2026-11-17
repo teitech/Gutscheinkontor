@@ -257,7 +257,7 @@ def smtp(monkeypatch):
 
 
 def test_smtp_starttls_mit_login(smtp):
-    mail.send_mail("anna@example.de", "Betreff", "Text")
+    assert mail.send_mail("anna@example.de", "Betreff", "Text") is True
     server = FakeSMTP.instances[0]
     assert server.args == ("mail.example.de", 587)
     assert server.calls == ["ehlo", "starttls", "ehlo", ("login", "user", "pw")]
@@ -285,7 +285,7 @@ def test_smtp_fehler_wird_nicht_weitergegeben(smtp, monkeypatch, caplog):
         raise OSError("Verbindung abgelehnt zu anna@example.de")
 
     monkeypatch.setattr(mail.smtplib, "SMTP", boom)
-    mail.send_mail("anna@example.de", "Betreff", "Text")  # darf nicht werfen
+    assert mail.send_mail("anna@example.de", "Betreff", "Text") is False  # wirft nicht
     assert "OSError" in caplog.text
     assert "anna@example.de" not in caplog.text  # keine Adresse im Log
 

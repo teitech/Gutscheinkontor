@@ -19,16 +19,17 @@ def is_enabled() -> bool:
     return bool(settings.smtp_host and settings.smtp_from)
 
 
-def send_mail(to: str, subject: str, body: str) -> None:
-    """Verschickt eine Text-Mail. Fehler werden protokolliert, aber nicht weitergegeben.
+def send_mail(to: str, subject: str, body: str) -> bool:
+    """Verschickt eine Text-Mail. Gibt zurück, ob der Server sie angenommen hat.
 
-    Gedacht für Hintergrundaufgaben: Die Antwort an den Browser darf nie davon abhängen,
-    ob der Versand klappt (sonst ließe sich ablesen, ob eine Adresse existiert).
+    Verbindungsfehler werden protokolliert, aber nicht weitergegeben. Gedacht auch für
+    Hintergrundaufgaben: Die Antwort an den Browser darf nie davon abhängen, ob der Versand
+    klappt (sonst ließe sich ablesen, ob eine Adresse existiert).
     """
     settings = get_settings()
     if not is_enabled():
         logger.warning("E-Mail-Versand ist nicht eingerichtet, Nachricht wird verworfen.")
-        return
+        return False
 
     message = EmailMessage()
     message["From"] = settings.smtp_from
@@ -58,3 +59,5 @@ def send_mail(to: str, subject: str, body: str) -> None:
     except Exception as exc:  # noqa: BLE001 - bewusst breit, siehe Docstring
         # Keine Adresse und kein Nachrichtentext im Log (Datenschutz).
         logger.error("E-Mail-Versand fehlgeschlagen (%s).", type(exc).__name__)
+        return False
+    return True

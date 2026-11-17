@@ -42,6 +42,18 @@ def expiry_text(expires_on: Optional[str], today: date) -> str:
     return f"Noch {_tage(n)}"
 
 
+def expiry_sentence(expires_on: Optional[str], today: date) -> str:
+    """Satzteil für Mails: 'läuft heute ab', 'läuft morgen ab', 'läuft in 7 Tagen ab'."""
+    n = days_until(expires_on, today)
+    if n is None or n < 0:
+        raise ValueError("Nur für Gutscheine, die noch nicht abgelaufen sind.")
+    if n == 0:
+        return "läuft heute ab"
+    if n == 1:
+        return "läuft morgen ab"
+    return f"läuft in {n} Tagen ab"
+
+
 def urgency(expires_on: Optional[str], today: date, finished: bool) -> str:
     """expired, soon (höchstens 7 Tage), ok, none. Erledigte Gutscheine sind immer none."""
     n = days_until(expires_on, today)

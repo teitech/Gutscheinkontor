@@ -17,6 +17,7 @@
         {{ _('Hell / Dunkel') }}
       </button>
       {% if user %}
+      <a class="btn btn-secondary" href="/settings">{{ _('Einstellungen') }}</a>
       <form method="post" action="/logout">
         <input type="hidden" name="csrf_token" value="{{ csrf }}">
         <button type="submit" class="btn btn-secondary">{{ _('Abmelden') }}</button>

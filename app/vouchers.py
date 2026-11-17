@@ -14,7 +14,7 @@ from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, List, Mapping, Optional, Set, Tuple
 
-from . import formatting, security
+from . import dates, formatting, security
 
 STATUS_LABELS = {
     "aktiv": "Aktiv",
@@ -317,26 +317,33 @@ def create_voucher(db: sqlite3.Connection, data: VoucherData, created_by: int) -
     state = _state_after_edit("open", data.value_cents, data.remaining_cents)
     cur = db.execute(
         "INSERT INTO vouchers (title, code_enc, value_cents, remaining_cents, expires_on, state, "
-        "owner_user_id, notes, created_by, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+        "owner_user_id, notes, created_by, created_at, updated_at, expiry_set_on) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
         (data.title, security.encrypt(data.code) if data.code else None, data.value_cents,
          data.remaining_cents, data.expires_on, state, data.owner_user_id, data.notes,
-         created_by, now, now),
+         created_by, now, now, dates.today().isoformat()),
     )
     set_tags(db, cur.lastrowid, data.tags)
     return cur.lastrowid
 
 
 def update_voucher(db: sqlite3.Connection, voucher_id: int, data: VoucherData) -> bool:
-    current = db.execute("SELECT state FROM vouchers WHERE id = ?", (voucher_id,)).fetchone()
+    current = db.execute(
+        "SELECT state, expires_on, expiry_set_on FROM vouchers WHERE id = ?", (voucher_id,)
+    ).fetchone()
     if current is None:
         return False
     state = _state_after_edit(current["state"], data.value_cents, data.remaining_cents)
+    # Wird das Ablaufdatum geändert, zählen die Erinnerungsstufen ab heute neu.
+    expiry_set_on = current["expiry_set_on"]
+    if data.expires_on != current["expires_on"]:
+        expiry_set_on = dates.today().isoformat()
     db.execute(
         "UPDATE vouchers SET title=?, code_enc=?, value_cents=?, remaining_cents=?, expires_on=?, "
-        "state=?, owner_user_id=?, notes=?, updated_at=? WHERE id=?",
+        "state=?, owner_user_id=?, notes=?, updated_at=?, expiry_set_on=? WHERE id=?",
         (data.title, security.encrypt(data.code) if data.code else None, data.value_cents,
          data.remaining_cents, data.expires_on, state, data.owner_user_id, data.notes,
-         _now_iso(), voucher_id),
+         _now_iso(), expiry_set_on, voucher_id),
     )
     set_tags(db, voucher_id, data.tags)
     return True

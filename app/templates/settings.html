@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Einstellungen') }} – Gutscheinkontor{% endblock %}
+{% block content %}
+<p><a href="/">← {{ _('Alle Gutscheine') }}</a></p>
+
+<section class="card narrow wide">
+  <h1>{{ _('Einstellungen') }}</h1>
+  <p class="muted">{{ account.display_name }}, {{ account.email }}</p>
+
+  <h2>{{ _('Erinnerungen per E-Mail') }}</h2>
+  {% if saved %}<p class="alert alert-info" role="status">{{ _('Gespeichert.') }}</p>{% endif %}
+  {% if not mail_enabled %}
+  <p class="alert alert-warn">{{ _('Der E-Mail-Versand ist auf diesem Server nicht eingerichtet. Erinnerungen werden deshalb nicht verschickt. Die Person, die die Instanz betreibt, trägt dafür einen SMTP-Server ein.') }}</p>
+  {% elif not reminders_on %}
+  <p class="alert alert-warn">{{ _('Erinnerungen sind auf diesem Server ausgeschaltet.') }}</p>
+  {% else %}
+  <p class="muted">{{ _('Du bekommst Mails an diesen Tagen vor dem Ablauf:') }} {{ days_text }}. {{ _('Der Versand erfolgt ab') }} {{ hour }}:00 {{ _('Uhr') }} ({{ timezone }}). {{ _('Gutscheine, die einer Person zugeordnet sind, melden nur an diese Person. Alle anderen melden an alle.') }}</p>
+  {% endif %}
+  <form method="post" action="/settings" class="form">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <label class="check">
+      <input type="checkbox" name="reminders" value="on" {% if account.reminders_enabled %}checked{% endif %}>
+      <span>{{ _('Erinnerungen für mein Konto einschalten') }}</span>
+    </label>
+    <div class="actions"><button class="btn" type="submit">{{ _('Speichern') }}</button></div>
+  </form>
+
+  <h2>{{ _('E-Mail-Versand prüfen') }}</h2>
+  {% if test_ok %}<p class="alert alert-info" role="status">{{ _('Die Testmail wurde verschickt. Schau in dein Postfach.') }}</p>{% endif %}
+  {% if test_error %}<p class="alert" role="alert">{{ test_error }}</p>{% endif %}
+  {% if mail_enabled %}
+  <form method="post" action="/settings/test-mail" class="actions">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <button class="btn btn-secondary" type="submit">{{ _('Testmail an mich senden') }}</button>
+  </form>
+  {% endif %}
+</section>
+{% endblock %}

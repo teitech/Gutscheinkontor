@@ -1,8 +1,8 @@
 """Gutscheinkontor: Einstiegspunkt der Web-App."""
 from __future__ import annotations
 
+import asyncio
 import secrets
-import sqlite3
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, Request
@@ -10,11 +10,12 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from . import security
+from . import reminders, security
 from .config import get_settings
 from .db import init_db
 from .routes_auth import require_active, router as auth_router
 from .routes_reset import router as reset_router
+from .routes_settings import router as settings_router
 from .routes_vouchers import router as voucher_router
 from .templating import BASE_DIR, Redirect, render
 
@@ -25,7 +26,15 @@ settings = get_settings()
 async def lifespan(app: FastAPI):
     settings.validate()  # ohne gültigen SECRET_KEY startet die App nicht
     init_db()
-    yield
+    # Erinnerungen prüft ein Hintergrundlauf im selben Prozess (die App läuft mit einem Worker).
+    stop = asyncio.Event()
+    task = asyncio.create_task(reminders.scheduler(stop)) if settings.reminders_enabled else None
+    try:
+        yield
+    finally:
+        stop.set()
+        if task is not None:
+            await task
 
 
 # Keine API-Doku öffentlich ausliefern: kleinere Angriffsfläche.
@@ -42,6 +51,7 @@ app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 app.include_router(auth_router)
 app.include_router(reset_router)
 app.include_router(voucher_router)
+app.include_router(settings_router)
 
 # Alles kommt von der eigenen Domain. Keine externen Ressourcen (Datenschutz).
 CSP = (

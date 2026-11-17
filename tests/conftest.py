@@ -9,6 +9,8 @@ os.environ["SECRET_KEY"] = "test-secret-key-test-secret-key-1234567890"
 os.environ["DATA_DIR"] = tempfile.mkdtemp(prefix="gk-test-")
 os.environ["BASE_URL"] = "http://testserver"
 os.environ.pop("SETUP_TOKEN", None)
+# Der Hintergrundlauf für Erinnerungen bleibt in Tests aus. Tests rufen run_once() selbst auf.
+os.environ["REMINDERS_ENABLED"] = "0"
 
 import pyotp  # noqa: E402
 import pytest  # noqa: E402
