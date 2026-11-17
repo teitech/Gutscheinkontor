@@ -8,12 +8,14 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from . import security
 from .config import get_settings
 from .db import init_db
 from .routes_auth import require_active, router as auth_router
 from .routes_reset import router as reset_router
+from .routes_vouchers import router as voucher_router
 from .templating import BASE_DIR, Redirect, render
 
 settings = get_settings()
@@ -39,6 +41,7 @@ app = FastAPI(
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 app.include_router(auth_router)
 app.include_router(reset_router)
+app.include_router(voucher_router)
 
 # Alles kommt von der eigenen Domain. Keine externen Ressourcen (Datenschutz).
 CSP = (
@@ -51,6 +54,18 @@ CSP = (
 @app.exception_handler(Redirect)
 async def redirect_handler(request: Request, exc: Redirect):
     return RedirectResponse(exc.url, status_code=303)
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_error_handler(request: Request, exc: StarletteHTTPException):
+    # Fehlerseiten auf Deutsch statt JSON. Starlette-Standardtexte sind englisch.
+    if exc.status_code == 404:
+        message = "Diese Seite oder dieser Eintrag existiert nicht."
+    else:
+        message = exc.detail if isinstance(exc.detail, str) and exc.detail else "Die Anfrage war nicht möglich."
+        if message in ("Forbidden", "Bad Request", "Method Not Allowed"):
+            message = "Die Anfrage war nicht möglich."
+    return render(request, "error.html", status_code=exc.status_code, message=message)
 
 
 @app.middleware("http")
@@ -69,16 +84,12 @@ async def csrf_and_security_headers(request: Request, call_next):
             settings.csrf_cookie, token, httponly=True,
             secure=settings.secure_cookies, samesite="lax", path="/",
         )
-    response.headers["Content-Security-Policy"] = CSP
+    # setdefault: Anhänge setzen eine eigene, strengere Richtlinie (sandbox).
+    response.headers.setdefault("Content-Security-Policy", CSP)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "same-origin"
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
     return response
-
-
-@app.get("/")
-def index(request: Request, ctx=Depends(require_active)):
-    return render(request, "index.html")
 
 
 @app.get("/health")

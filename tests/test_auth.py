@@ -11,7 +11,7 @@ def test_einrichtung_bis_dashboard(client, clock):
     do_setup(client, clock)
     r = client.get("/")
     assert r.status_code == 200
-    assert "Hallo Anna" in r.text
+    assert "Noch keine Gutscheine" in r.text
 
 
 def test_einrichtung_nur_einmal(client, clock):

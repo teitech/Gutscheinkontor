@@ -5,6 +5,7 @@ import os
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 SMTP_SECURITY_MODES = ("starttls", "ssl", "none")
 
@@ -36,7 +37,19 @@ class Settings:
     smtp_password: str = ""
     smtp_from: str = ""
     smtp_security: str = "starttls"
+    # Zeitzone für "heute" (Ablaufdaten, später Erinnerungen).
+    timezone: str = "Europe/Berlin"
+    # Größtes erlaubtes Anhang-Format in MB. Der Reverse Proxy muss gleich große Uploads erlauben.
+    max_upload_mb: int = 10
     repo_url: str = "https://github.com/teitech/Gutscheinkontor"
+
+    @property
+    def max_upload_bytes(self) -> int:
+        return self.max_upload_mb * 1024 * 1024
+
+    @property
+    def attachments_dir(self) -> str:
+        return str(Path(self.data_dir) / "attachments")
 
     @property
     def secure_cookies(self) -> bool:
@@ -69,6 +82,12 @@ class Settings:
             raise RuntimeError(
                 f"SMTP_SECURITY muss einer von {', '.join(SMTP_SECURITY_MODES)} sein."
             )
+        try:
+            ZoneInfo(self.timezone)
+        except Exception as exc:  # noqa: BLE001
+            raise RuntimeError(f"TIMEZONE ist unbekannt: {self.timezone}") from exc
+        if not 1 <= self.max_upload_mb <= 200:
+            raise RuntimeError("MAX_UPLOAD_MB muss zwischen 1 und 200 liegen.")
 
 
 @lru_cache
@@ -88,4 +107,6 @@ def get_settings() -> Settings:
         smtp_password=_read_env("SMTP_PASSWORD"),
         smtp_from=os.environ.get("SMTP_FROM", "").strip(),
         smtp_security=security,
+        timezone=os.environ.get("TIMEZONE", "Europe/Berlin").strip(),
+        max_upload_mb=int(os.environ.get("MAX_UPLOAD_MB") or 10),
     )

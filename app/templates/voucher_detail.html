@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}{{ v.title }} – Gutscheinkontor{% endblock %}
+{% block content %}
+<p><a href="/">← {{ _('Alle Gutscheine') }}</a></p>
+
+<section class="card">
+  <div class="page-head">
+    <h1>{{ v.title }}</h1>
+    <span class="badge badge-status">{{ v.status_label }}</span>
+  </div>
+
+  <dl class="detail">
+    {% if v.value_cents is not none %}
+    <dt>{{ _('Wert') }}</dt><dd>{{ v.value_text }}</dd>
+    <dt>{{ _('Restwert') }}</dt><dd><strong>{{ v.remaining_text }}</strong></dd>
+    {% endif %}
+    <dt>{{ _('Gültig bis') }}</dt>
+    <dd>{% if v.expires_text %}{{ v.expires_text }} <span class="badge badge-{{ v.urgency }}">{{ v.expiry_text }}</span>{% else %}{{ _('Kein Ablaufdatum') }}{% endif %}</dd>
+    {% if v.owner_name %}<dt>{{ _('Zugehörig zu') }}</dt><dd>{{ v.owner_name }}</dd>{% endif %}
+    {% if v.tags %}<dt>{{ _('Schlagwörter') }}</dt><dd><span class="tags">{% for t in v.tags %}<span class="tag">{{ t }}</span>{% endfor %}</span></dd>{% endif %}
+    <dt>{{ _('Code') }}</dt>
+    <dd>
+      {% if not code_readable %}
+        <span class="alert">{{ _('Der Code ist nicht lesbar. Wurde der SECRET_KEY geändert?') }}</span>
+      {% elif code %}
+        <code id="voucher-code" class="voucher-code">{{ code }}</code>
+        <button type="button" class="btn btn-secondary" data-copy="voucher-code" data-done="{{ _('Kopiert') }}">{{ _('Kopieren') }}</button>
+      {% else %}
+        <span class="muted">{{ _('Kein Code hinterlegt') }}</span>
+      {% endif %}
+    </dd>
+    {% if v.notes %}<dt>{{ _('Notizen') }}</dt><dd class="notes">{{ v.notes }}</dd>{% endif %}
+  </dl>
+
+  <div class="actions">
+    <a class="btn" href="/vouchers/{{ v.id }}/edit">{{ _('Bearbeiten') }}</a>
+    {% if v.state == 'open' %}
+    <form method="post" action="/vouchers/{{ v.id }}/state">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      <input type="hidden" name="action" value="redeem_all">
+      <button class="btn btn-secondary" type="submit">{{ _('Als eingelöst markieren') }}</button>
+    </form>
+    {% elif v.state == 'redeemed' %}
+    <form method="post" action="/vouchers/{{ v.id }}/state">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      <input type="hidden" name="action" value="reopen">
+      <button class="btn btn-secondary" type="submit">{{ _('Wieder öffnen') }}</button>
+    </form>
+    {% endif %}
+    {% if v.state == 'archived' %}
+    <form method="post" action="/vouchers/{{ v.id }}/state">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      <input type="hidden" name="action" value="unarchive">
+      <button class="btn btn-secondary" type="submit">{{ _('Aus Archiv holen') }}</button>
+    </form>
+    {% else %}
+    <form method="post" action="/vouchers/{{ v.id }}/state">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      <input type="hidden" name="action" value="archive">
+      <button class="btn btn-secondary" type="submit">{{ _('Archivieren') }}</button>
+    </form>
+    {% endif %}
+    <a class="btn btn-danger" href="/vouchers/{{ v.id }}/delete">{{ _('Löschen') }}</a>
+  </div>
+</section>
+
+{% if v.state == 'open' and v.value_cents is not none and v.remaining_cents %}
+<section class="card section">
+  <h2>{{ _('Betrag einlösen') }}</h2>
+  {% if redeem_error %}<p class="alert" role="alert">{{ redeem_error }}</p>{% endif %}
+  <form method="post" action="/vouchers/{{ v.id }}/redeem" class="form inline-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <label>{{ _('Betrag in Euro') }}
+      <input type="text" name="amount" inputmode="decimal" placeholder="10,00" required>
+    </label>
+    <button class="btn" type="submit">{{ _('Abziehen') }}</button>
+  </form>
+  <p class="muted">{{ _('Der Betrag wird vom Restwert abgezogen. Bei 0 gilt der Gutschein als eingelöst.') }}</p>
+</section>
+{% endif %}
+
+<section class="card section">
+  <h2>{{ _('Anhänge') }}</h2>
+  {% if upload_error %}<p class="alert" role="alert">{{ upload_error }}</p>{% endif %}
+  {% if files %}
+  <ul class="attachments">
+    {% for f in files %}
+    <li>
+      {% if f.is_image %}<a href="/attachments/{{ f.id }}"><img src="/attachments/{{ f.id }}" alt="{{ f.original_name }}" class="thumb"></a>{% endif %}
+      <div class="attachment-info">
+        <a href="/attachments/{{ f.id }}">{{ f.original_name }}</a>
+        <span class="muted">{{ f.size_text }}</span>
+      </div>
+      <form method="post" action="/attachments/{{ f.id }}/delete">
+        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+        <button class="btn btn-secondary" type="submit">{{ _('Entfernen') }}</button>
+      </form>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted">{{ _('Noch keine Anhänge.') }}</p>
+  {% endif %}
+
+  {% if can_upload %}
+  <form method="post" action="/vouchers/{{ v.id }}/attachments" enctype="multipart/form-data" class="form inline-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <label>{{ _('Datei hinzufügen') }}
+      <input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp" required>
+    </label>
+    <button class="btn" type="submit">{{ _('Hochladen') }}</button>
+  </form>
+  <p class="muted">{{ _('PDF, PNG, JPEG oder WebP, höchstens') }} {{ max_upload_mb }} MB, {{ _('bis zu') }} {{ max_files }} {{ _('Dateien.') }}</p>
+  {% else %}
+  <p class="muted">{{ _('Die maximale Zahl an Anhängen ist erreicht.') }}</p>
+  {% endif %}
+</section>
+{% endblock %}
+{% block scripts %}<script src="/static/vouchers.js" defer></script>{% endblock %}

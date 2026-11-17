@@ -46,6 +46,10 @@ def client(clock):
     for suffix in ("", "-wal", "-shm"):
         Path(str(db_file) + suffix).unlink(missing_ok=True)
     limiter.reset_all()
+    attachments_dir = Path(get_settings().attachments_dir)
+    if attachments_dir.exists():
+        for leftover in attachments_dir.iterdir():
+            leftover.unlink()
     with TestClient(app, follow_redirects=False) as c:
         yield c
 

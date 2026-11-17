@@ -6,7 +6,19 @@ Gutscheinkontor verwaltet alle Gutscheine an einem Ort und erinnert rechtzeitig 
 
 ## Status
 
-Frühe Entwicklungsphase. Fertig sind das Anwendungsgerüst, die SQLite-Datenbank mit Migrationen und der Login: Ersteinrichtung, Passwort, Zwei-Faktor-Anmeldung (TOTP) mit Wiederherstellungscodes und Abmelden. Ebenfalls fertig: E-Mail-Versand über einen eigenen SMTP-Server und der Passwort-Reset per E-Mail-Link. Noch nicht fertig: Einladungen, Gutscheinverwaltung, Erinnerungen, Import/Export.
+Frühe Entwicklungsphase. Fertig sind das Anwendungsgerüst, die SQLite-Datenbank mit Migrationen und der Login: Ersteinrichtung, Passwort, Zwei-Faktor-Anmeldung (TOTP) mit Wiederherstellungscodes und Abmelden. Ebenfalls fertig: E-Mail-Versand über einen eigenen SMTP-Server, der Passwort-Reset per E-Mail-Link und die Gutscheinverwaltung. Noch nicht fertig: Einladungen, Erinnerungsmails, Import/Export, Backups.
+
+## Gutscheine
+
+- Pro Gutschein: Name oder Firma, Code (verschlüsselt), Wert, Restwert, Ablaufdatum, zugehörige Person, Schlagwörter, Notizen und Anhänge.
+- Teilbeträge lassen sich einlösen. Der Restwert wird mitgeführt, bei 0 gilt der Gutschein als eingelöst.
+- „Abgelaufen“ und „teilweise eingelöst“ werden aus Datum und Restwert berechnet. Gutscheine lassen sich archivieren oder löschen.
+- Suche über Name, Notizen und Schlagwörter (unabhängig von Groß- und Kleinschreibung), Filter nach Status, Schlagwort und Person, Sortierung nach Ablaufdatum.
+- Es gibt einen gemeinsamen Bestand: Alle Nutzer einer Instanz sehen und bearbeiten alle Gutscheine.
+
+### Anhänge
+
+Erlaubt sind PDF, PNG, JPEG und WebP bis 10 MB (`MAX_UPLOAD_MB`), höchstens 10 pro Gutschein. Geprüft wird der tatsächliche Dateiinhalt, nicht der Dateiname. PDFs mit JavaScript oder eingebetteten Dateien werden abgelehnt, PDFs werden nur als Download ausgeliefert. **Das ist keine Virenprüfung.** Der Reverse Proxy muss Uploads in dieser Größe erlauben (bei nginx `client_max_body_size`, Caddy hat standardmäßig kein Limit).
 
 ## E-Mail und Passwort-Reset
 

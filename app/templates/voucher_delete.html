@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Gutschein löschen') }} – Gutscheinkontor{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>{{ _('Gutschein löschen?') }}</h1>
+  <p>{{ _('Der Gutschein') }} <strong>{{ v.title }}</strong> {{ _('wird mit Code und allen Anhängen endgültig gelöscht. Das lässt sich nicht rückgängig machen.') }}</p>
+  <p class="muted">{{ _('Wenn du ihn nur ausblenden willst, nutze stattdessen „Archivieren“.') }}</p>
+  <form method="post" action="/vouchers/{{ v.id }}/delete" class="actions">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <button class="btn btn-danger" type="submit">{{ _('Endgültig löschen') }}</button>
+    <a class="btn btn-secondary" href="/vouchers/{{ v.id }}">{{ _('Abbrechen') }}</a>
+  </form>
+</section>
+{% endblock %}

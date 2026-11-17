@@ -181,3 +181,127 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; word-break: 
 @media (min-width: 640px) {
   .container { padding: 2rem 1rem; }
 }
+
+/* --- Gutscheine --------------------------------------------------------- */
+
+.page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.page-head h1 { margin: 0; font-size: 1.5rem; }
+.summary { margin: 0 0 1rem; }
+.section { margin-top: 1rem; }
+.section h2 { margin-top: 0; font-size: 1.15rem; }
+.wide { max-width: 36rem; }
+
+.filters {
+  display: grid;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.filters label, .form label { display: grid; gap: 0.35rem; font-weight: 600; }
+.filter-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.more summary { display: flex; align-items: center; min-height: 44px; font-weight: 600; cursor: pointer; }
+.more summary::before { content: "▸"; margin-right: 0.5rem; }
+.more[open] summary::before { content: "▾"; }
+.more-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+/* Kopfleiste auch auf schmalen Handys vollständig sichtbar */
+.topbar { flex-wrap: wrap; }
+.topbar-actions .btn { padding: 0 0.75rem; white-space: nowrap; }
+
+.form input, .form select, .form textarea, .filters input, .filters select {
+  min-height: 44px;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-weight: 400;
+}
+
+.form textarea { resize: vertical; }
+.hint { font-weight: 400; font-size: 0.875rem; color: var(--muted); }
+.field-error { font-weight: 400; font-size: 0.875rem; color: #c0392b; }
+.row { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: 1rem; }
+
+.voucher-list { display: grid; gap: 0.75rem; margin: 0; padding: 0; list-style: none; }
+
+.voucher-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.35rem 1rem;
+  padding: 1rem;
+  color: var(--text);
+  text-decoration: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.voucher-card:hover { border-color: var(--accent); }
+.voucher-title { font-weight: 700; overflow-wrap: anywhere; }
+.voucher-amount { font-weight: 700; text-align: right; white-space: nowrap; }
+.voucher-meta, .tags { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+
+.badge {
+  display: inline-block;
+  padding: 0.1rem 0.6rem;
+  font-size: 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+}
+
+.badge-ok { border-color: var(--accent); }
+.badge-soon { border-color: #b7791f; background: rgba(183, 121, 31, 0.16); }
+.badge-expired { border-color: #c0392b; background: rgba(192, 57, 43, 0.14); }
+.badge-status { background: var(--bg); }
+
+.tag {
+  padding: 0.05rem 0.5rem;
+  font-size: 0.8rem;
+  color: var(--muted);
+  background: var(--bg);
+  border-radius: 6px;
+}
+
+.detail { display: grid; grid-template-columns: max-content 1fr; gap: 0.5rem 1.25rem; margin: 1rem 0; }
+.detail dt { color: var(--muted); }
+.detail dd { margin: 0; overflow-wrap: anywhere; }
+.notes { white-space: pre-wrap; }
+.voucher-code { font-size: 1.15rem; margin-right: 0.5rem; }
+
+.actions { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.actions form { margin: 0; }
+.btn-danger { background: transparent; color: #c0392b; border-color: #c0392b; }
+
+.inline-form { grid-template-columns: 1fr auto; align-items: end; margin-top: 0.5rem; }
+.inline-form label { margin: 0; }
+
+.attachments { display: grid; gap: 0.75rem; margin: 0 0 1rem; padding: 0; list-style: none; }
+.attachments li { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.attachment-info { display: grid; flex: 1; min-width: 8rem; overflow-wrap: anywhere; }
+.thumb { display: block; width: 4.5rem; height: 4.5rem; object-fit: cover; border: 1px solid var(--border); border-radius: 8px; }
+
+@media (max-width: 480px) {
+  .detail { grid-template-columns: 1fr; gap: 0.1rem; }
+  .detail dd { margin-bottom: 0.6rem; }
+  .inline-form { grid-template-columns: 1fr; }
+}

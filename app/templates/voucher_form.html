@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{% if mode == 'new' %}{{ _('Neuer Gutschein') }}{% else %}{{ _('Gutschein bearbeiten') }}{% endif %} – Gutscheinkontor{% endblock %}
+{% block content %}
+<section class="card narrow wide">
+  <h1>{% if mode == 'new' %}{{ _('Neuer Gutschein') }}{% else %}{{ _('Gutschein bearbeiten') }}{% endif %}</h1>
+  {% if errors %}<p class="alert" role="alert">{{ _('Bitte prüfe die markierten Felder.') }}</p>{% endif %}
+  <form method="post" action="{% if mode == 'new' %}/vouchers{% else %}/vouchers/{{ voucher.id }}/edit{% endif %}" class="form">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+
+    <label>{{ _('Name oder Firma') }}
+      <input type="text" name="title" value="{{ form.title }}" required maxlength="100" autofocus>
+      {% if errors.title %}<span class="field-error">{{ errors.title }}</span>{% endif %}
+    </label>
+
+    <label>{{ _('Gutscheincode') }}
+      <input type="text" name="code" value="{{ form.code }}" maxlength="500" autocomplete="off" spellcheck="false">
+      <span class="hint">{{ _('Wird verschlüsselt gespeichert.') }}</span>
+      {% if errors.code %}<span class="field-error">{{ errors.code }}</span>{% endif %}
+    </label>
+
+    <div class="row">
+      <label>{{ _('Wert in Euro') }}
+        <input type="text" name="value" value="{{ form.value }}" inputmode="decimal" placeholder="25,00">
+        {% if errors.value %}<span class="field-error">{{ errors.value }}</span>{% endif %}
+      </label>
+      {% if mode == 'edit' %}
+      <label>{{ _('Restwert in Euro') }}
+        <input type="text" name="remaining" value="{{ form.remaining }}" inputmode="decimal">
+        {% if errors.remaining %}<span class="field-error">{{ errors.remaining }}</span>{% endif %}
+      </label>
+      {% endif %}
+    </div>
+
+    <label>{{ _('Gültig bis') }}
+      <input type="date" name="expires_on" value="{{ form.expires_on }}">
+      <span class="hint">{{ _('Leer lassen, wenn der Gutschein nicht abläuft.') }}</span>
+      {% if errors.expires_on %}<span class="field-error">{{ errors.expires_on }}</span>{% endif %}
+    </label>
+
+    <label>{{ _('Zugehörig zu') }}
+      <select name="owner">
+        <option value="">{{ _('Niemand') }}</option>
+        {% for o in owners %}<option value="{{ o.id }}" {% if form.owner == o.id|string %}selected{% endif %}>{{ o.display_name }}</option>{% endfor %}
+      </select>
+      {% if errors.owner %}<span class="field-error">{{ errors.owner }}</span>{% endif %}
+    </label>
+
+    <label>{{ _('Schlagwörter') }}
+      <input type="text" name="tags" value="{{ form.tags }}" placeholder="{{ _('Essen, Kleidung') }}">
+      <span class="hint">{{ _('Mit Komma trennen.') }}</span>
+      {% if errors.tags %}<span class="field-error">{{ errors.tags }}</span>{% endif %}
+    </label>
+
+    <label>{{ _('Notizen') }}
+      <textarea name="notes" rows="4" maxlength="2000">{{ form.notes }}</textarea>
+      {% if errors.notes %}<span class="field-error">{{ errors.notes }}</span>{% endif %}
+    </label>
+
+    <div class="actions">
+      <button class="btn" type="submit">{{ _('Speichern') }}</button>
+      <a class="btn btn-secondary" href="{% if mode == 'new' %}/{% else %}/vouchers/{{ voucher.id }}{% endif %}">{{ _('Abbrechen') }}</a>
+    </div>
+  </form>
+  {% if mode == 'new' %}<p class="muted">{{ _('Anhänge kannst du nach dem Speichern hinzufügen.') }}</p>{% endif %}
+</section>
+{% endblock %}

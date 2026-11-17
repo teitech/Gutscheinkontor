@@ -41,6 +41,7 @@ def init_db() -> None:
     """Datenverzeichnis anlegen und fehlende Migrationen einspielen."""
     settings = get_settings()
     Path(settings.data_dir).mkdir(parents=True, exist_ok=True)
+    Path(settings.attachments_dir).mkdir(parents=True, exist_ok=True)
     conn = connect()
     try:
         current = conn.execute("PRAGMA user_version").fetchone()[0]
