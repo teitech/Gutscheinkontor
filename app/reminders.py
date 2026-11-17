@@ -27,7 +27,7 @@ from zoneinfo import ZoneInfo
 
 from starlette.concurrency import run_in_threadpool
 
-from . import formatting, mail
+from . import formatting, mail, vouchers
 from .config import get_settings
 from .db import connect, transaction
 
@@ -44,6 +44,8 @@ class Item:
     days_left: int
     remaining_cents: Optional[int]
     stage: int
+    benefit: str = ""          # bei Prozent oder Freitext, sonst leer
+    min_order_cents: Optional[int] = None
 
 
 def current_stage(days_left: int, stages: Tuple[int, ...]) -> Optional[int]:
@@ -61,7 +63,8 @@ def pending(db: sqlite3.Connection, today: date, stages: Tuple[int, ...]):
     }
     result: Dict[int, Tuple[sqlite3.Row, List[Item]]] = {}
     rows = db.execute(
-        "SELECT id, title, expires_on, expiry_set_on, remaining_cents, owner_user_id "
+        "SELECT id, title, expires_on, expiry_set_on, remaining_cents, owner_user_id, "
+        "kind, percent, benefit_text, min_order_cents "
         "FROM vouchers WHERE state = 'open' AND expires_on IS NOT NULL"
     ).fetchall()
     for v in rows:
@@ -88,7 +91,9 @@ def pending(db: sqlite3.Connection, today: date, stages: Tuple[int, ...]):
             ).fetchone()
             if already:
                 continue
-            item = Item(v["id"], v["title"], v["expires_on"], days_left, v["remaining_cents"], stage)
+            benefit = vouchers.benefit_label(v) if v["kind"] != "amount" else ""
+            item = Item(v["id"], v["title"], v["expires_on"], days_left, v["remaining_cents"], stage,
+                        benefit, v["min_order_cents"])
             result.setdefault(user_id, (users[user_id], []))[1].append(item)
     for _, items in result.values():
         items.sort(key=lambda i: (i.days_left, i.title.casefold()))
@@ -110,6 +115,10 @@ def build_mail(display_name: str, items: List[Item], today: date) -> Tuple[str, 
             f", Restwert {formatting.format_euro(item.remaining_cents)}"
             if item.remaining_cents is not None else ""
         )
+        if item.benefit:
+            rest = f", {item.benefit}"
+        if item.min_order_cents is not None:
+            rest += f", ab {formatting.format_euro(item.min_order_cents)} Warenkorb"
         sentence = formatting.expiry_sentence(item.expires_on, today)
         lines.append(f"- {item.title}: {sentence} ({formatting.format_date(item.expires_on)}){rest}")
         lines.append(f"  {settings.base_url}/vouchers/{item.voucher_id}")

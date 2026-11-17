@@ -10,7 +10,7 @@ Der geplante Umfang von Version 1 ist umgesetzt. Die Tests laufen bei jedem Push
 
 ## Funktionen
 
-- Gutscheine mit Ablaufdatum, Wert, Restwert, Schlagwörtern, Notizen und Anhängen, Code verschlüsselt gespeichert
+- Gutscheine mit Ablaufdatum, Wert oder Prozent-Rabatt, Mindestbestellwert, Restwert, Schlagwörtern, Notizen und Anhängen, Code verschlüsselt gespeichert
 - Erinnerungsmails vor dem Ablauf (standardmäßig 30, 7 und 1 Tag vorher)
 - Mehrere Nutzer (z. B. Familie) mit gemeinsamem Bestand, Einladung per Link
 - Login mit Passwort und Pflicht-Zwei-Faktor (TOTP), Passwort-Reset per E-Mail
@@ -61,8 +61,10 @@ Administratoren können Nutzer sperren (sofort abgemeldet, Anmeldung nicht mehr 
 
 ## Gutscheine
 
-- Pro Gutschein: Name oder Firma, Code (verschlüsselt), Wert, Restwert, Ablaufdatum, zugehörige Person, Schlagwörter, Notizen und Anhänge.
-- Teilbeträge lassen sich einlösen. Der Restwert wird mitgeführt, bei 0 gilt der Gutschein als eingelöst.
+- Pro Gutschein: Name oder Firma, Code (verschlüsselt), Art und Wert (siehe unten), Restwert, Ablaufdatum, zugehörige Person, Schlagwörter, Notizen und Anhänge.
+- Drei Arten: **Betrag in Euro**, **Prozent-Rabatt** (z. B. „10 % auf den nächsten Einkauf“) und **Sonstiges** mit freiem Text (z. B. „Gratis-Versand“). Bei Prozent und Sonstiges gibt es keinen Restwert, der Gutschein ist offen oder eingelöst.
+- Optional hat jeder Gutschein einen **Mindestbestellwert**. Er steht in Liste, Detailansicht und Erinnerungsmail.
+- Teilbeträge lassen sich einlösen (bei Betrags-Gutscheinen). Der Restwert wird mitgeführt, bei 0 gilt der Gutschein als eingelöst.
 - „Abgelaufen“ und „teilweise eingelöst“ werden aus Datum und Restwert berechnet. Gutscheine lassen sich archivieren oder löschen.
 - Suche über Name, Notizen und Schlagwörter (unabhängig von Groß- und Kleinschreibung), Filter nach Status, Schlagwort und Person, Sortierung nach Ablaufdatum.
 - Es gibt einen gemeinsamen Bestand: Alle Nutzer einer Instanz sehen und bearbeiten alle Gutscheine.
@@ -80,7 +82,7 @@ Die App schickt Mails vor dem Ablauf, standardmäßig 30, 7 und 1 Tag vorher (`R
 - **Gerade angelegt:** Stufen, die schon vorbei waren, als du das Ablaufdatum gesetzt hast, entfallen. Ein Gutschein, den du mit 20 Tagen Restlaufzeit anlegst, löst keine 30-Tage-Mail aus. Ändert sich das Ablaufdatum, zählen die Stufen für das neue Datum von vorn.
 - **Wer bekommt sie:** Ist ein Gutschein einer Person zugeordnet, nur diese. Sonst alle Nutzer. Jeder kann Erinnerungen für sich unter „Einstellungen“ abschalten.
 - **Keine Erinnerung** gibt es für eingelöste, archivierte und abgelaufene Gutscheine und für solche ohne Ablaufdatum.
-- **Datenschutz:** Der Gutscheincode steht nie in der Mail, nur Name, Datum, Restwert und ein Link. Schlägt der Versand fehl, versucht die App es alle 30 Minuten erneut.
+- **Datenschutz:** Der Gutscheincode steht nie in der Mail, nur Name, Datum, Restwert bzw. Vorteil, Mindestbestellwert und ein Link. Schlägt der Versand fehl, versucht die App es alle 30 Minuten erneut.
 
 ## E-Mail und Passwort-Reset
 
@@ -103,7 +105,7 @@ Unter „Export / Import“ gibt es zwei Exporte:
 
 **Die Exporte enthalten standardmäßig die Gutscheincodes im Klartext**, damit eine Sicherung auch in einer Instanz mit anderem `SECRET_KEY` funktioniert. Bewahre sie sicher auf. Du kannst die Codes beim Export weglassen. Nutzerkonten, Passwörter und 2FA-Daten werden nie exportiert. Personen werden über ihre E-Mail-Adresse zugeordnet. Gibt es sie in der Ziel-Instanz nicht, ist der Gutschein danach niemandem zugeordnet.
 
-Der Import nimmt nur dieses ZIP-Format an und **fügt nur hinzu**: Bestehende Gutscheine werden nie verändert oder gelöscht. Duplikate (gleicher Name, Code, Ablaufdatum und Wert) werden auf Wunsch übersprungen, und ein Probelauf zeigt vorab, was passieren würde. Die Datei wird wie eine fremde Eingabe behandelt: Jeder Eintrag durchläuft dieselbe Prüfung wie ein Formular, jeder Anhang dieselbe Prüfung wie ein Upload, und Größe, Anzahl und entpackter Umfang sind begrenzt (`MAX_IMPORT_MB`). Unlesbare Einträge werden übersprungen und im Bericht aufgeführt.
+Der Import nimmt nur dieses ZIP-Format an und **fügt nur hinzu**: Bestehende Gutscheine werden nie verändert oder gelöscht. Duplikate (gleicher Name, Code, Ablaufdatum und Vorteil) werden auf Wunsch übersprungen, und ein Probelauf zeigt vorab, was passieren würde. Die Datei wird wie eine fremde Eingabe behandelt: Jeder Eintrag durchläuft dieselbe Prüfung wie ein Formular, jeder Anhang dieselbe Prüfung wie ein Upload, und Größe, Anzahl und entpackter Umfang sind begrenzt (`MAX_IMPORT_MB`). Unlesbare Einträge werden übersprungen und im Bericht aufgeführt.
 
 ## Backups
 

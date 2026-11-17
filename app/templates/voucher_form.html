@@ -18,7 +18,14 @@
       {% if errors.code %}<span class="field-error">{{ errors.code }}</span>{% endif %}
     </label>
 
-    <div class="row">
+    <label>{{ _('Art des Gutscheins') }}
+      <select name="kind" id="kind-select">
+        {% for key, label in kinds %}<option value="{{ key }}" {% if form.kind == key %}selected{% endif %}>{{ _(label) }}</option>{% endfor %}
+      </select>
+      {% if errors.kind %}<span class="field-error">{{ errors.kind }}</span>{% endif %}
+    </label>
+
+    <div class="row" data-kind="amount">
       <label>{{ _('Wert in Euro') }}
         <input type="text" name="value" value="{{ form.value }}" inputmode="decimal" placeholder="25,00">
         {% if errors.value %}<span class="field-error">{{ errors.value }}</span>{% endif %}
@@ -30,6 +37,23 @@
       </label>
       {% endif %}
     </div>
+
+    <label data-kind="percent">{{ _('Rabatt in Prozent') }}
+      <input type="text" name="percent" value="{{ form.percent }}" inputmode="numeric" placeholder="10">
+      <span class="hint">{{ _('Zum Beispiel 10 für „10 % auf den nächsten Einkauf“.') }}</span>
+      {% if errors.percent %}<span class="field-error">{{ errors.percent }}</span>{% endif %}
+    </label>
+
+    <label data-kind="other">{{ _('Vorteil') }}
+      <input type="text" name="benefit_text" value="{{ form.benefit_text }}" maxlength="100" placeholder="{{ _('Gratis-Versand') }}">
+      {% if errors.benefit_text %}<span class="field-error">{{ errors.benefit_text }}</span>{% endif %}
+    </label>
+
+    <label>{{ _('Mindestbestellwert in Euro') }}
+      <input type="text" name="min_order" value="{{ form.min_order }}" inputmode="decimal" placeholder="50,00">
+      <span class="hint">{{ _('Optional. Der Gutschein gilt erst ab diesem Warenkorbwert.') }}</span>
+      {% if errors.min_order %}<span class="field-error">{{ errors.min_order }}</span>{% endif %}
+    </label>
 
     <label>{{ _('Gültig bis') }}
       <input type="date" name="expires_on" value="{{ form.expires_on }}">
@@ -64,3 +88,4 @@
   {% if mode == 'new' %}<p class="muted">{{ _('Anhänge kannst du nach dem Speichern hinzufügen.') }}</p>{% endif %}
 </section>
 {% endblock %}
+{% block scripts %}<script src="/static/vouchers.js" defer></script>{% endblock %}

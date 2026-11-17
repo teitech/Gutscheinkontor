@@ -339,3 +339,5 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; word-break: 
 .user-info { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.6rem; min-width: 0; overflow-wrap: anywhere; }
 .user-row .btn { min-height: 40px; padding: 0 0.75rem; }
 .form input[readonly] { color: var(--muted); }
+
+[hidden] { display: none !important; }

@@ -26,7 +26,7 @@ from .config import get_settings
 from .db import transaction
 
 FORMAT_NAME = "gutscheinkontor-export"
-FORMAT_VERSION = 1
+FORMAT_VERSION = 2  # 2: Art des Vorteils (Prozent, Freitext) und Mindestbestellwert
 JSON_MEMBER = "export.json"
 
 MAX_JSON_BYTES = 20 * 1024 * 1024
@@ -100,6 +100,10 @@ def build_export_zip(db: sqlite3.Connection, include_codes: bool):
                 "code": code if include_codes else None,
                 "value_cents": v["value_cents"],
                 "remaining_cents": v["remaining_cents"],
+                "kind": v["kind"],
+                "percent": v["percent"],
+                "benefit_text": v["benefit_text"],
+                "min_order_cents": v["min_order_cents"],
                 "expires_on": v["expires_on"],
                 "state": v["state"],
                 "owner_email": v["owner_email"],
@@ -123,7 +127,8 @@ def build_export_zip(db: sqlite3.Connection, include_codes: bool):
     return tmp
 
 
-CSV_HEADER = ["Name", "Code", "Wert", "Restwert", "Ablaufdatum", "Status", "Zugehörig zu",
+CSV_HEADER = ["Name", "Code", "Art", "Wert", "Restwert", "Prozent", "Vorteil (Text)",
+              "Mindestbestellwert", "Ablaufdatum", "Status", "Zugehörig zu",
               "Schlagwörter", "Notizen", "Angelegt am"]
 
 
@@ -152,8 +157,12 @@ def build_csv(db: sqlite3.Connection, include_codes: bool) -> bytes:
         writer.writerow([_csv_safe(c) for c in [
             v["title"],
             code,
+            dict(vouchers.KINDS)[v["kind"]],
             _money_text(v["value_cents"]),
             _money_text(v["remaining_cents"]),
+            str(v["percent"] or ""),
+            v["benefit_text"],
+            _money_text(v["min_order_cents"]),
             formatting.format_date(v["expires_on"]),
             vouchers.STATUS_LABELS[vouchers.status_key(v, today)],
             owner_names.get(v["owner_user_id"], ""),
@@ -216,6 +225,14 @@ def _cents(value: Any, label: str) -> str:
     return _money_text(value)
 
 
+def _percent(value: Any) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError("percent muss eine ganze Zahl sein.")
+    return str(value)
+
+
 def _entry_to_form(entry: Dict[str, Any], owners: Dict[str, int]) -> Tuple[Dict[str, str], Optional[str]]:
     """Wandelt einen JSON-Eintrag in Formularfelder, damit dieselbe Prüfung wie in der Oberfläche greift."""
     tags = entry.get("tags", [])
@@ -231,6 +248,10 @@ def _entry_to_form(entry: Dict[str, Any], owners: Dict[str, int]) -> Tuple[Dict[
         "code": _text(entry.get("code"), "code"),
         "value": _cents(entry.get("value_cents"), "value_cents"),
         "remaining": _cents(entry.get("remaining_cents"), "remaining_cents"),
+        "kind": _text(entry.get("kind"), "kind") or "amount",  # Dateien aus Version 0.1 haben keine Art
+        "percent": _percent(entry.get("percent")),
+        "benefit_text": _text(entry.get("benefit_text"), "benefit_text"),
+        "min_order": _cents(entry.get("min_order_cents"), "min_order_cents"),
         "expires_on": _text(entry.get("expires_on"), "expires_on"),
         "owner": str(owner_id) if owner_id else "",
         "notes": _text(entry.get("notes"), "notes"),
@@ -239,15 +260,17 @@ def _entry_to_form(entry: Dict[str, Any], owners: Dict[str, int]) -> Tuple[Dict[
     return form, owner_note
 
 
-def _duplicate_key(title: str, code: str, expires_on: Optional[str], value_cents: Optional[int]):
-    return (title.casefold(), code, expires_on or "", value_cents)
+def _duplicate_key(title: str, code: str, expires_on: Optional[str], value_cents: Optional[int],
+                   kind: str = "amount", percent: Optional[int] = None, benefit_text: str = ""):
+    return (title.casefold(), code, expires_on or "", value_cents, kind, percent, benefit_text.casefold())
 
 
 def _existing_keys(db: sqlite3.Connection) -> Set[Tuple[Any, ...]]:
     keys = set()
-    for v in db.execute("SELECT title, code_enc, expires_on, value_cents FROM vouchers"):
+    for v in db.execute("SELECT title, code_enc, expires_on, value_cents, kind, percent, benefit_text FROM vouchers"):
         code, _readable = vouchers.decrypt_code(v)
-        keys.add(_duplicate_key(v["title"], code, v["expires_on"], v["value_cents"]))
+        keys.add(_duplicate_key(v["title"], code, v["expires_on"], v["value_cents"],
+                                v["kind"], v["percent"], v["benefit_text"]))
     return keys
 
 
@@ -307,7 +330,8 @@ def _import_entry(db, archive, names, entry, idx, owners, existing, skip_duplica
         report.add_invalid(f"{label}: " + "; ".join(errors.values()))
         return
 
-    key = _duplicate_key(data.title, data.code, data.expires_on, data.value_cents)
+    key = _duplicate_key(data.title, data.code, data.expires_on, data.value_cents,
+                         data.kind, data.percent, data.benefit_text)
     if skip_duplicates and key in existing:
         report.duplicates += 1
         return

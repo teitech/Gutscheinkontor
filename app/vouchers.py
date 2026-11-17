@@ -44,6 +44,10 @@ MAX_NOTES_LENGTH = 2000
 
 MONEY_HINT = "Bitte gib einen Betrag wie 25 oder 25,50 an."
 
+KINDS = (("amount", "Betrag in Euro"), ("percent", "Prozent-Rabatt"), ("other", "Sonstiges"))
+KIND_KEYS = tuple(key for key, _ in KINDS)
+MAX_BENEFIT_LENGTH = 100
+
 
 # --- Eingaben lesen -------------------------------------------------------------
 
@@ -113,6 +117,10 @@ class VoucherData:
     owner_user_id: Optional[int]
     notes: str
     tags: List[str]
+    kind: str = "amount"
+    percent: Optional[int] = None
+    benefit_text: str = ""
+    min_order_cents: Optional[int] = None
 
 
 def validate_form(
@@ -130,22 +138,47 @@ def validate_form(
     if len(code) > MAX_CODE_LENGTH:
         errors["code"] = f"Höchstens {MAX_CODE_LENGTH} Zeichen."
 
-    value = remaining = None
+    kind = form.get("kind", "").strip() or "amount"
+    if kind not in KIND_KEYS:
+        errors["kind"] = "Bitte wähle eine Art aus der Liste."
+        kind = "amount"
+
+    value = remaining = percent = None
+    benefit_text = ""
+    if kind == "amount":
+        try:
+            value = parse_money(form.get("value", ""))
+        except ValueError as exc:
+            errors["value"] = str(exc)
+        try:
+            remaining = parse_money(form.get("remaining", ""))
+        except ValueError as exc:
+            errors["remaining"] = str(exc)
+        if "value" not in errors and "remaining" not in errors:
+            if value is None and remaining is not None:
+                errors["remaining"] = "Ein Restwert geht nur zusammen mit einem Wert."
+            elif value is not None and remaining is None:
+                remaining = value
+            elif value is not None and remaining is not None and remaining > value:
+                errors["remaining"] = "Der Restwert darf nicht größer als der Wert sein."
+    elif kind == "percent":
+        percent_text = form.get("percent", "").strip().rstrip("%").strip()
+        if not re.fullmatch(r"\d{1,3}", percent_text) or not 1 <= int(percent_text) <= 100:
+            errors["percent"] = "Bitte gib eine ganze Zahl von 1 bis 100 an."
+        else:
+            percent = int(percent_text)
+    else:
+        benefit_text = " ".join(form.get("benefit_text", "").split())
+        if not benefit_text:
+            errors["benefit_text"] = "Bitte beschreibe den Vorteil kurz."
+        elif len(benefit_text) > MAX_BENEFIT_LENGTH:
+            errors["benefit_text"] = f"Höchstens {MAX_BENEFIT_LENGTH} Zeichen."
+
+    min_order = None
     try:
-        value = parse_money(form.get("value", ""))
+        min_order = parse_money(form.get("min_order", "")) or None  # 0 bedeutet: kein Mindestwert
     except ValueError as exc:
-        errors["value"] = str(exc)
-    try:
-        remaining = parse_money(form.get("remaining", ""))
-    except ValueError as exc:
-        errors["remaining"] = str(exc)
-    if "value" not in errors and "remaining" not in errors:
-        if value is None and remaining is not None:
-            errors["remaining"] = "Ein Restwert geht nur zusammen mit einem Wert."
-        elif value is not None and remaining is None:
-            remaining = value
-        elif value is not None and remaining is not None and remaining > value:
-            errors["remaining"] = "Der Restwert darf nicht größer als der Wert sein."
+        errors["min_order"] = str(exc)
 
     expires_on = None
     try:
@@ -174,7 +207,8 @@ def validate_form(
     if errors:
         return None, errors
     return (
-        VoucherData(title, code, value, remaining, expires_on, owner, notes, tags),
+        VoucherData(title, code, value, remaining, expires_on, owner, notes, tags,
+                    kind, percent, benefit_text, min_order),
         errors,
     )
 
@@ -195,6 +229,16 @@ def status_key(v: Mapping[str, Any], today: date) -> str:
     return "aktiv"
 
 
+def benefit_label(v: Mapping[str, Any]) -> str:
+    """Kurztext zum Vorteil, z. B. '25,00 €', '10 %' oder der freie Text."""
+    kind = v["kind"]
+    if kind == "percent":
+        return f"{v['percent']} %"
+    if kind == "other":
+        return v["benefit_text"]
+    return formatting.format_euro(v["remaining_cents"] if v["remaining_cents"] is not None else v["value_cents"])
+
+
 def to_view(v: Mapping[str, Any], today: date) -> Dict[str, Any]:
     key = status_key(v, today)
     view = dict(v)
@@ -202,6 +246,8 @@ def to_view(v: Mapping[str, Any], today: date) -> Dict[str, Any]:
         status_key=key,
         status_label=STATUS_LABELS[key],
         value_text=formatting.format_euro(v["value_cents"]),
+        benefit_label=benefit_label(v),
+        min_order_text=formatting.format_euro(v["min_order_cents"]),
         remaining_text=formatting.format_euro(v["remaining_cents"]),
         expires_text=formatting.format_date(v["expires_on"]),
         expiry_text=formatting.expiry_text(v["expires_on"], today),
@@ -317,11 +363,13 @@ def create_voucher(db: sqlite3.Connection, data: VoucherData, created_by: int) -
     state = _state_after_edit("open", data.value_cents, data.remaining_cents)
     cur = db.execute(
         "INSERT INTO vouchers (title, code_enc, value_cents, remaining_cents, expires_on, state, "
-        "owner_user_id, notes, created_by, created_at, updated_at, expiry_set_on) "
-        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+        "owner_user_id, notes, created_by, created_at, updated_at, expiry_set_on, "
+        "kind, percent, benefit_text, min_order_cents) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         (data.title, security.encrypt(data.code) if data.code else None, data.value_cents,
          data.remaining_cents, data.expires_on, state, data.owner_user_id, data.notes,
-         created_by, now, now, dates.today().isoformat()),
+         created_by, now, now, dates.today().isoformat(),
+         data.kind, data.percent, data.benefit_text, data.min_order_cents),
     )
     set_tags(db, cur.lastrowid, data.tags)
     return cur.lastrowid
@@ -340,10 +388,12 @@ def update_voucher(db: sqlite3.Connection, voucher_id: int, data: VoucherData) -
         expiry_set_on = dates.today().isoformat()
     db.execute(
         "UPDATE vouchers SET title=?, code_enc=?, value_cents=?, remaining_cents=?, expires_on=?, "
-        "state=?, owner_user_id=?, notes=?, updated_at=?, expiry_set_on=? WHERE id=?",
+        "state=?, owner_user_id=?, notes=?, updated_at=?, expiry_set_on=?, "
+        "kind=?, percent=?, benefit_text=?, min_order_cents=? WHERE id=?",
         (data.title, security.encrypt(data.code) if data.code else None, data.value_cents,
          data.remaining_cents, data.expires_on, state, data.owner_user_id, data.notes,
-         _now_iso(), expiry_set_on, voucher_id),
+         _now_iso(), expiry_set_on, data.kind, data.percent, data.benefit_text,
+         data.min_order_cents, voucher_id),
     )
     set_tags(db, voucher_id, data.tags)
     return True

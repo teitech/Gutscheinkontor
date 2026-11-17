@@ -12,3 +12,16 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 });
+
+// Formular: nur die Felder zur gewählten Art des Gutscheins zeigen.
+document.addEventListener("DOMContentLoaded", function () {
+  var select = document.getElementById("kind-select");
+  if (!select) return;
+  function update() {
+    document.querySelectorAll("[data-kind]").forEach(function (el) {
+      el.hidden = el.getAttribute("data-kind") !== select.value;
+    });
+  }
+  select.addEventListener("change", update);
+  update();
+});
