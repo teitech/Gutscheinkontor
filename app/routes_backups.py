@@ -6,19 +6,13 @@ from fastapi.responses import FileResponse, RedirectResponse
 
 from . import backups
 from .ratelimit import limiter
-from .routes_auth import require_active, require_csrf
+from .routes_auth import require_admin, require_csrf
 from .templating import render
 
 router = APIRouter()
 
 CREATE_WINDOW = 60 * 60
 CREATE_LIMIT = 5
-
-
-def require_admin(ctx=Depends(require_active)):
-    if not ctx[1]["is_admin"]:
-        raise HTTPException(status_code=403, detail="Nur Administratoren dürfen Backups verwalten.")
-    return ctx
 
 
 @router.post("/backups/create")

@@ -83,6 +83,13 @@ def require_stage(stage: str):
 require_active = require_stage("active")
 
 
+def require_admin(ctx=Depends(require_active)):
+    """Dependency: nur Administratoren. Alle anderen bekommen eine deutsche 403-Seite."""
+    if not ctx[1]["is_admin"]:
+        raise HTTPException(status_code=403, detail="Das dürfen nur Administratoren.")
+    return ctx
+
+
 # --- Ersteinrichtung ---------------------------------------------------------
 
 

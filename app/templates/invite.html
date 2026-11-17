@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Einladung annehmen') }} – Gutscheinkontor{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>{{ _('Willkommen im Gutscheinkontor') }}</h1>
+  <p class="muted">{{ _('Du wurdest eingeladen. Lege dein Konto an. Danach richtest du die Zwei-Faktor-Anmeldung ein.') }}</p>
+  {% if error %}<p class="alert" role="alert">{{ error }}</p>{% endif %}
+  <form method="post" action="/invite/{{ token }}" class="form">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <label>{{ _('E-Mail') }}
+      <input type="email" value="{{ email }}" readonly>
+    </label>
+    <label>{{ _('Name') }}
+      <input type="text" name="display_name" value="{{ display_name or '' }}" required maxlength="100" autocomplete="name" autofocus>
+    </label>
+    <label>{{ _('Passwort (mindestens 12 Zeichen)') }}
+      <input type="password" name="password" required minlength="12" autocomplete="new-password">
+    </label>
+    <label>{{ _('Passwort wiederholen') }}
+      <input type="password" name="password_repeat" required minlength="12" autocomplete="new-password">
+    </label>
+    <button class="btn" type="submit">{{ _('Konto anlegen') }}</button>
+  </form>
+</section>
+{% endblock %}

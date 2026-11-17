@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Nutzer') }} – Gutscheinkontor{% endblock %}
+{% block content %}
+<p><a href="/settings">← {{ _('Einstellungen') }}</a></p>
+
+<section class="card">
+  <h1>{{ _('Nutzer') }}</h1>
+  <ul class="user-list">
+    {% for u in users %}
+    <li class="user-row">
+      <div class="user-info">
+        <strong>{{ u.display_name }}</strong>
+        {% if u.id == self_id %}<span class="badge badge-ok">{{ _('Du') }}</span>{% endif %}
+        {% if u.is_admin %}<span class="badge badge-status">{{ _('Administrator') }}</span>{% endif %}
+        {% if not u.is_active %}<span class="badge badge-expired">{{ _('Gesperrt') }}</span>{% endif %}
+        {% if not u.totp_enabled %}<span class="badge badge-soon">{{ _('2FA fehlt noch') }}</span>{% endif %}
+        <span class="muted">{{ u.email }}</span>
+      </div>
+      {% if u.id != self_id %}
+      <div class="actions">
+        {% if u.is_active %}
+          <form method="post" action="/users/{{ u.id }}/disable"><input type="hidden" name="csrf_token" value="{{ csrf }}"><button class="btn btn-secondary" type="submit">{{ _('Sperren') }}</button></form>
+        {% else %}
+          <form method="post" action="/users/{{ u.id }}/enable"><input type="hidden" name="csrf_token" value="{{ csrf }}"><button class="btn btn-secondary" type="submit">{{ _('Entsperren') }}</button></form>
+        {% endif %}
+        {% if u.is_admin %}
+          <form method="post" action="/users/{{ u.id }}/remove-admin"><input type="hidden" name="csrf_token" value="{{ csrf }}"><button class="btn btn-secondary" type="submit">{{ _('Admin-Rechte entziehen') }}</button></form>
+        {% else %}
+          <form method="post" action="/users/{{ u.id }}/make-admin"><input type="hidden" name="csrf_token" value="{{ csrf }}"><button class="btn btn-secondary" type="submit">{{ _('Zum Administrator machen') }}</button></form>
+        {% endif %}
+        <a class="btn btn-danger" href="/users/{{ u.id }}/delete">{{ _('Löschen') }}</a>
+      </div>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  <p class="muted">{{ _('Alle Nutzer sehen und bearbeiten denselben Gutschein-Bestand. Administratoren können zusätzlich Nutzer einladen und verwalten sowie Backups ansehen.') }}</p>
+</section>
+
+<section class="card section">
+  <h2>{{ _('Neue Person einladen') }}</h2>
+  {% if invite_link %}
+  <div class="alert alert-info" role="status">
+    <strong>{{ _('Einladung für') }} {{ invite_email }} {{ _('erstellt.') }}</strong>
+    {% if invite_mail_sent is sameas true %}<p>{{ _('Die Einladung wurde per E-Mail verschickt.') }}</p>
+    {% elif invite_mail_sent is sameas false %}<p>{{ _('Die E-Mail konnte nicht verschickt werden. Gib der Person den Link selbst weiter.') }}</p>{% endif %}
+    <p>{{ _('Der Link ist') }} {{ invite_days }} {{ _('Tage gültig, nur einmal nutzbar und wird nur jetzt angezeigt:') }}</p>
+    <p><code id="invite-link">{{ invite_link }}</code></p>
+    <p><button type="button" class="btn btn-secondary" data-copy="invite-link" data-done="{{ _('Kopiert') }}">{{ _('Link kopieren') }}</button></p>
+  </div>
+  {% endif %}
+  {% if invite_error %}<p class="alert" role="alert">{{ invite_error }}</p>{% endif %}
+  <form method="post" action="/users/invite" class="form">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <label>{{ _('E-Mail-Adresse der Person') }}
+      <input type="email" name="email" value="{{ invite_email_value or '' }}" required autocomplete="off">
+    </label>
+    {% if mail_enabled %}
+    <label class="check">
+      <input type="checkbox" name="send_mail" value="on" checked>
+      <span>{{ _('Einladung per E-Mail verschicken') }}</span>
+    </label>
+    {% else %}
+    <p class="muted">{{ _('Der E-Mail-Versand ist nicht eingerichtet. Du bekommst den Link zum Weitergeben.') }}</p>
+    {% endif %}
+    <div class="actions"><button class="btn" type="submit">{{ _('Einladung erstellen') }}</button></div>
+  </form>
+  <p class="muted">{{ _('Die Person legt über den Link Namen und Passwort fest und richtet danach die Zwei-Faktor-Anmeldung ein. Eine offene Registrierung gibt es nicht.') }}</p>
+</section>
+
+{% if pending %}
+<section class="card section">
+  <h2>{{ _('Offene Einladungen') }}</h2>
+  <ul class="user-list">
+    {% for i in pending %}
+    <li class="user-row">
+      <div class="user-info">
+        <strong>{{ i.email }}</strong>
+        <span class="muted">{{ _('gültig bis') }} {{ i.expires_text }}{% if i.inviter %}, {{ _('eingeladen von') }} {{ i.inviter }}{% endif %}</span>
+      </div>
+      <form method="post" action="/users/invitations/{{ i.id }}/revoke">
+        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+        <button class="btn btn-secondary" type="submit">{{ _('Zurückziehen') }}</button>
+      </form>
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endblock %}
+{% block scripts %}<script src="/static/vouchers.js" defer></script>{% endblock %}

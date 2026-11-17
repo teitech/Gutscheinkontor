@@ -6,7 +6,17 @@ Gutscheinkontor verwaltet alle Gutscheine an einem Ort und erinnert rechtzeitig 
 
 ## Status
 
-Frühe Entwicklungsphase. Fertig sind das Anwendungsgerüst, die SQLite-Datenbank mit Migrationen und der Login: Ersteinrichtung, Passwort, Zwei-Faktor-Anmeldung (TOTP) mit Wiederherstellungscodes und Abmelden. Ebenfalls fertig: E-Mail-Versand über einen eigenen SMTP-Server, der Passwort-Reset per E-Mail-Link, die Gutscheinverwaltung, die Erinnerungsmails, Import/Export und automatische Backups. Noch nicht fertig: Einladungen.
+Frühe Entwicklungsphase. Fertig sind das Anwendungsgerüst, die SQLite-Datenbank mit Migrationen und der Login: Ersteinrichtung, Passwort, Zwei-Faktor-Anmeldung (TOTP) mit Wiederherstellungscodes und Abmelden. Ebenfalls fertig: E-Mail-Versand über einen eigenen SMTP-Server, der Passwort-Reset per E-Mail-Link, die Gutscheinverwaltung, die Erinnerungsmails, Import/Export, automatische Backups und die Einladung weiterer Nutzer. Damit ist der geplante Umfang von Version 1 umgesetzt. Was noch fehlt, sind der Praxistest des Docker-Images und der Pipeline sowie eine Veröffentlichung als Release.
+
+## Nutzer und Einladungen
+
+Die erste Person, die die Ersteinrichtung abschließt, wird Administrator. Weitere Konten entstehen nur per Einladung, eine offene Registrierung gibt es nicht:
+
+1. Ein Administrator lädt unter „Einstellungen → Nutzer einladen und verwalten“ eine E-Mail-Adresse ein. Mit eingerichtetem Mailserver geht der Link per Mail raus. Der Link wird dem Administrator **nur einmal** angezeigt, weil in der Datenbank nur sein Hash steht.
+2. Die Person öffnet den Link (7 Tage gültig, einmal nutzbar), legt Namen und Passwort fest (die E-Mail-Adresse steht fest) und richtet danach die Zwei-Faktor-Anmeldung ein.
+3. Alle Nutzer sehen und bearbeiten denselben Gutschein-Bestand. Nur Administratoren verwalten Nutzer und Backups.
+
+Administratoren können Nutzer sperren (sofort abgemeldet, Anmeldung nicht mehr möglich), entsperren, zu Administratoren machen oder Admin-Rechte entziehen und Konten löschen. Gutscheine einer gelöschten Person bleiben erhalten und sind danach niemandem zugeordnet. Sich selbst kann man weder sperren noch löschen, und es bleibt immer mindestens ein aktiver Administrator. Setze `BASE_URL` auf die öffentliche Adresse, sonst zeigen Einladungslinks auf `localhost`.
 
 ## Backups
 

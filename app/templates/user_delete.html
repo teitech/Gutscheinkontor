@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Nutzer löschen') }} – Gutscheinkontor{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>{{ _('Nutzer löschen?') }}</h1>
+  <p>{{ _('Das Konto von') }} <strong>{{ target.display_name }}</strong> ({{ target.email }}) {{ _('wird endgültig gelöscht, mit Passwort, 2FA und Sitzungen. Das lässt sich nicht rückgängig machen.') }}</p>
+  <p class="muted">{{ _('Die Gutscheine bleiben erhalten. Gutscheine, die dieser Person zugeordnet waren, sind danach niemandem zugeordnet.') }}</p>
+  <p class="muted">{{ _('Wenn du den Zugang nur vorübergehend sperren willst, nutze stattdessen „Sperren“.') }}</p>
+  <form method="post" action="/users/{{ target.id }}/delete" class="actions">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <button class="btn btn-danger" type="submit">{{ _('Endgültig löschen') }}</button>
+    <a class="btn btn-secondary" href="/users">{{ _('Abbrechen') }}</a>
+  </form>
+</section>
+{% endblock %}

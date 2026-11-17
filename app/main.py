@@ -19,6 +19,7 @@ from .routes_backups import router as backups_router
 from .routes_reset import router as reset_router
 from .routes_settings import router as settings_router
 from .routes_transfer import router as transfer_router
+from .routes_users import router as users_router
 from .routes_vouchers import router as voucher_router
 from .templating import BASE_DIR, Redirect, render
 
@@ -71,6 +72,7 @@ app.include_router(voucher_router)
 app.include_router(settings_router)
 app.include_router(transfer_router)
 app.include_router(backups_router)
+app.include_router(users_router)
 
 # Alles kommt von der eigenen Domain. Keine externen Ressourcen (Datenschutz).
 CSP = (

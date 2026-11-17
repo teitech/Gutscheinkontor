@@ -121,6 +121,47 @@ def reset_credentials(db: sqlite3.Connection, user_id: int, password_hash: str) 
     db.execute("DELETE FROM password_resets WHERE user_id = ?", (user_id,))
 
 
+# --- Einladungen --------------------------------------------------------------
+
+INVITE_TTL = 7 * 24 * 3600  # Einladungslink: 7 Tage gültig
+MAX_PENDING_INVITATIONS = 20
+
+
+def purge_expired_invitations(db: sqlite3.Connection) -> None:
+    db.execute("DELETE FROM invitations WHERE expires_at <= ?", (int(_now()),))
+
+
+def create_invitation(db: sqlite3.Connection, email: str, invited_by: int) -> str:
+    """Neue Einladung. Eine ältere Einladung für dieselbe Adresse wird ungültig."""
+    token = secrets.token_urlsafe(32)
+    db.execute("DELETE FROM invitations WHERE email = ?", (email,))
+    db.execute(
+        "INSERT INTO invitations (token_hash, email, invited_by, created_at, expires_at) "
+        "VALUES (?, ?, ?, ?, ?)",
+        (hash_token(token), email, invited_by, int(_now()), int(_now()) + INVITE_TTL),
+    )
+    return token
+
+
+def find_invitation(db: sqlite3.Connection, token: str) -> Optional[sqlite3.Row]:
+    """Prüft einen Einladungslink, ohne ihn zu verbrauchen."""
+    if not token:
+        return None
+    return db.execute(
+        "SELECT * FROM invitations WHERE token_hash = ? AND expires_at > ?",
+        (hash_token(token), int(_now())),
+    ).fetchone()
+
+
+def consume_invitation(db: sqlite3.Connection, token: str) -> Optional[sqlite3.Row]:
+    """Verbraucht die Einladung genau einmal und gibt sie zurück (oder None)."""
+    row = find_invitation(db, token)
+    if row is None:
+        return None
+    cur = db.execute("DELETE FROM invitations WHERE id = ?", (row["id"],))
+    return row if cur.rowcount == 1 else None
+
+
 # --- TOTP -------------------------------------------------------------------
 
 

@@ -25,6 +25,11 @@
     <div class="actions"><button class="btn" type="submit">{{ _('Speichern') }}</button></div>
   </form>
 
+  {% if account.is_admin %}
+  <h2>{{ _('Nutzer') }}</h2>
+  <p><a href="/users">{{ _('Nutzer einladen und verwalten') }} →</a></p>
+  {% endif %}
+
   <h2>{{ _('E-Mail-Versand prüfen') }}</h2>
   {% if test_ok %}<p class="alert alert-info" role="status">{{ _('Die Testmail wurde verschickt. Schau in dein Postfach.') }}</p>{% endif %}
   {% if test_error %}<p class="alert" role="alert">{{ test_error }}</p>{% endif %}

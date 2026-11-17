@@ -90,7 +90,11 @@ def do_setup(client, clock):
         "password": PASSWORD, "password_repeat": PASSWORD,
     })
     assert r.status_code == 303 and r.headers["location"] == "/2fa/setup"
+    return finish_2fa_setup(client, clock)
 
+
+def finish_2fa_setup(client, clock):
+    """Zwei-Faktor-Anmeldung für die aktuelle Sitzung einrichten. Gibt (Geheimnis, Codes) zurück."""
     page = client.get("/2fa/setup")
     secret = secret_from(page.text)
     code = pyotp.TOTP(secret).at(clock.t)
