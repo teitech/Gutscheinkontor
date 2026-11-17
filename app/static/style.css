@@ -120,6 +120,7 @@ a { color: var(--accent); }
 }
 
 .alert-warn { border-color: #b7791f; background: rgba(183, 121, 31, 0.14); }
+.alert-info { border-color: var(--accent); background: rgba(11, 107, 87, 0.12); }
 
 .narrow { max-width: 28rem; margin: 0 auto; }
 

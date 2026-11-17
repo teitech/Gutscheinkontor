@@ -117,12 +117,8 @@ def setup_submit(
         error = "Bitte gib einen Namen an (höchstens 100 Zeichen)."
     elif len(email) > 254 or not EMAIL_RE.match(email):
         error = "Bitte gib eine gültige E-Mail-Adresse an."
-    elif len(password) < security.MIN_PASSWORD_LENGTH:
-        error = f"Das Passwort muss mindestens {security.MIN_PASSWORD_LENGTH} Zeichen lang sein."
-    elif len(password) > security.MAX_PASSWORD_LENGTH:
-        error = f"Das Passwort darf höchstens {security.MAX_PASSWORD_LENGTH} Zeichen lang sein."
-    elif password != password_repeat:
-        error = "Die Passwörter stimmen nicht überein."
+    else:
+        error = security.password_error(password, password_repeat)
     if error:
         return render(
             request, "setup.html", status_code=400, error=error,
@@ -154,7 +150,13 @@ def login_form(request: Request, db: sqlite3.Connection = Depends(get_db)):
         return RedirectResponse("/", status_code=303)
     if user_count(db) == 0:
         return RedirectResponse("/setup", status_code=303)
-    return render(request, "login.html")
+    notice = None
+    if request.query_params.get("reset") == "1":  # feste Meldung, kein Text aus der URL
+        notice = (
+            "Dein Passwort wurde geändert. Melde dich an und richte danach "
+            "die Zwei-Faktor-Anmeldung neu ein."
+        )
+    return render(request, "login.html", notice=notice)
 
 
 @router.post("/login")

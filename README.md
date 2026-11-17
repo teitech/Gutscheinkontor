@@ -6,7 +6,19 @@ Gutscheinkontor verwaltet alle Gutscheine an einem Ort und erinnert rechtzeitig 
 
 ## Status
 
-Frühe Entwicklungsphase. Fertig sind das Anwendungsgerüst, die SQLite-Datenbank mit Migrationen und der Login: Ersteinrichtung, Passwort, Zwei-Faktor-Anmeldung (TOTP) mit Wiederherstellungscodes und Abmelden. Noch nicht fertig: Passwort-Reset per E-Mail, Einladungen, Gutscheinverwaltung, Erinnerungen, Import/Export.
+Frühe Entwicklungsphase. Fertig sind das Anwendungsgerüst, die SQLite-Datenbank mit Migrationen und der Login: Ersteinrichtung, Passwort, Zwei-Faktor-Anmeldung (TOTP) mit Wiederherstellungscodes und Abmelden. Ebenfalls fertig: E-Mail-Versand über einen eigenen SMTP-Server und der Passwort-Reset per E-Mail-Link. Noch nicht fertig: Einladungen, Gutscheinverwaltung, Erinnerungen, Import/Export.
+
+## E-Mail und Passwort-Reset
+
+Der Versand läuft über einen SMTP-Server deiner Wahl (Einstellungen in `.env.example`). Wer das Passwort vergisst, bekommt einen Link, der eine Stunde gilt und nur einmal funktioniert. Beim Zurücksetzen werden alle Sitzungen beendet, und die Zwei-Faktor-Anmeldung wird zurückgesetzt. Beim nächsten Login richtet man sie neu ein.
+
+Das heißt auch: **Wer Zugriff auf das Postfach eines Nutzers hat, kann dessen Konto übernehmen.** Sichere die E-Mail-Konten der Nutzer entsprechend ab.
+
+Ohne eingerichteten Mailserver erzeugt der Betreiber den Link auf der Kommandozeile:
+
+```bash
+docker compose exec gutscheinkontor python -m app.cli reset-password anna@example.de
+```
 
 ## Lokal ausprobieren
 

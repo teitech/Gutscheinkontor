@@ -4,6 +4,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import hmac
+from typing import Optional
 from urllib.parse import urlparse
 
 from argon2 import PasswordHasher
@@ -18,6 +19,17 @@ DUMMY_HASH = _hasher.hash("gutscheinkontor-dummy-passwort")
 
 MIN_PASSWORD_LENGTH = 12
 MAX_PASSWORD_LENGTH = 256
+
+
+def password_error(password: str, repeat: str) -> Optional[str]:
+    """Prüft die Passwortregeln. Gibt eine Fehlermeldung zurück oder None."""
+    if len(password) < MIN_PASSWORD_LENGTH:
+        return f"Das Passwort muss mindestens {MIN_PASSWORD_LENGTH} Zeichen lang sein."
+    if len(password) > MAX_PASSWORD_LENGTH:
+        return f"Das Passwort darf höchstens {MAX_PASSWORD_LENGTH} Zeichen lang sein."
+    if password != repeat:
+        return "Die Passwörter stimmen nicht überein."
+    return None
 
 
 def hash_password(password: str) -> str:

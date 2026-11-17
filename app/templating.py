@@ -6,6 +6,7 @@ from pathlib import Path
 from fastapi import Request
 from fastapi.templating import Jinja2Templates
 
+from . import mail
 from .config import get_settings
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -27,6 +28,7 @@ class Redirect(Exception):
 def render(request: Request, name: str, status_code: int = 200, **context):
     context.setdefault("csrf", getattr(request.state, "csrf", ""))
     context.setdefault("user", getattr(request.state, "user", None))
+    context.setdefault("mail_enabled", mail.is_enabled())
     response = templates.TemplateResponse(request, name, context, status_code=status_code)
     # Seiten mit Formularen oder persönlichen Daten nicht zwischenspeichern.
     response.headers["Cache-Control"] = "no-store"

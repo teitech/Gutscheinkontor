@@ -3,6 +3,7 @@
 {% block content %}
 <section class="card narrow">
   <h1>{{ _('Anmelden') }}</h1>
+  {% if notice %}<p class="alert alert-info" role="status">{{ notice }}</p>{% endif %}
   {% if error %}<p class="alert" role="alert">{{ error }}</p>{% endif %}
   <form method="post" action="/login" class="form">
     <input type="hidden" name="csrf_token" value="{{ csrf }}">
@@ -14,5 +15,6 @@
     </label>
     <button class="btn" type="submit">{{ _('Anmelden') }}</button>
   </form>
+  <p><a href="/password-reset">{{ _('Passwort vergessen?') }}</a></p>
 </section>
 {% endblock %}

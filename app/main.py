@@ -13,6 +13,7 @@ from . import security
 from .config import get_settings
 from .db import init_db
 from .routes_auth import require_active, router as auth_router
+from .routes_reset import router as reset_router
 from .templating import BASE_DIR, Redirect, render
 
 settings = get_settings()
@@ -37,6 +38,7 @@ app = FastAPI(
 
 app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 app.include_router(auth_router)
+app.include_router(reset_router)
 
 # Alles kommt von der eigenen Domain. Keine externen Ressourcen (Datenschutz).
 CSP = (

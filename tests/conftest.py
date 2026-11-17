@@ -54,6 +54,15 @@ def csrf_from(html: str) -> str:
     return re.search(r'name="csrf_token" value="([^"]+)"', html).group(1)
 
 
+def csrf_value(client) -> str:
+    """CSRF-Wert aus dem Cookie ableiten, unabhängig davon, welche Seite gerade Formulare hat."""
+    from app import security
+
+    if "gk_csrf" not in client.cookies:
+        client.get("/health")
+    return security.csrf_field_value(client.cookies.get("gk_csrf"))
+
+
 def secret_from(html: str) -> str:
     return re.search(r'id="totp-secret">([^<]+)<', html).group(1).replace(" ", "")
 

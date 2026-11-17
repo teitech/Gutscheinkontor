@@ -70,6 +70,57 @@ def count_failed_attempt(db: sqlite3.Connection, session: sqlite3.Row) -> None:
     )
 
 
+# --- Passwort zurücksetzen ----------------------------------------------------
+
+RESET_TTL = 60 * 60  # Reset-Link: 1 Stunde gültig
+
+
+def create_password_reset(db: sqlite3.Connection, user_id: int) -> str:
+    """Neuer Reset-Token. Ältere Links desselben Nutzers werden ungültig."""
+    token = secrets.token_urlsafe(32)
+    db.execute("DELETE FROM password_resets WHERE user_id = ?", (user_id,))
+    db.execute(
+        "INSERT INTO password_resets (token_hash, user_id, expires_at) VALUES (?, ?, ?)",
+        (hash_token(token), user_id, int(_now()) + RESET_TTL),
+    )
+    return token
+
+
+def find_password_reset(db: sqlite3.Connection, token: str) -> Optional[sqlite3.Row]:
+    """Prüft einen Token, ohne ihn zu verbrauchen."""
+    if not token:
+        return None
+    return db.execute(
+        "SELECT * FROM password_resets WHERE token_hash = ? AND expires_at > ?",
+        (hash_token(token), int(_now())),
+    ).fetchone()
+
+
+def consume_password_reset(db: sqlite3.Connection, token: str) -> Optional[int]:
+    """Verbraucht den Token genau einmal. Gibt die Nutzer-ID zurück oder None."""
+    row = find_password_reset(db, token)
+    if row is None:
+        return None
+    cur = db.execute("DELETE FROM password_resets WHERE token_hash = ?", (row["token_hash"],))
+    return row["user_id"] if cur.rowcount == 1 else None
+
+
+def reset_credentials(db: sqlite3.Connection, user_id: int, password_hash: str) -> None:
+    """Neues Passwort setzen und die Zwei-Faktor-Anmeldung zurücksetzen.
+
+    Alle Sitzungen, Wiederherstellungscodes und weiteren Reset-Links werden ungültig.
+    Beim nächsten Login muss die 2FA neu eingerichtet werden.
+    """
+    db.execute(
+        "UPDATE users SET password_hash = ?, totp_secret_enc = NULL, totp_enabled = 0, "
+        "totp_last_step = 0 WHERE id = ?",
+        (password_hash, user_id),
+    )
+    db.execute("DELETE FROM recovery_codes WHERE user_id = ?", (user_id,))
+    db.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
+    db.execute("DELETE FROM password_resets WHERE user_id = ?", (user_id,))
+
+
 # --- TOTP -------------------------------------------------------------------
 
 

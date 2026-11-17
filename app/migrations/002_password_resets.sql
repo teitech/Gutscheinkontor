@@ -1,0 +1,7 @@
+-- Einmal nutzbare Links zum Zurücksetzen des Passworts. Gespeichert wird nur der Hash.
+CREATE TABLE password_resets (
+    token_hash TEXT PRIMARY KEY,
+    user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    expires_at INTEGER NOT NULL
+);
+CREATE INDEX idx_password_resets_user ON password_resets(user_id);
