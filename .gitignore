@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Daten (niemals committen)
+*.db
+*.sqlite3
+data/
+backups/
+.env
+
+# Editor
+.DS_Store
