@@ -107,8 +107,12 @@ class _PinnedHTTPS(http.client.HTTPSConnection):
         self.sock = self._context.wrap_socket(sock, server_hostname=self.host)
 
 
-def fetch(url: str, max_bytes: int, deadline: float) -> Tuple[str, str, bytes]:
-    """Lädt eine Adresse. Gibt (endgültige Adresse, Content-Type, Inhalt) zurück."""
+def fetch(url: str, max_bytes: int, deadline: float, truncate: bool = False) -> Tuple[str, str, bytes]:
+    """Lädt eine Adresse. Gibt (endgültige Adresse, Content-Type, Inhalt) zurück.
+
+    Ist die Antwort größer als `max_bytes`, ist das ein Fehler. Mit `truncate=True` wird stattdessen
+    nur der Anfang gelesen (für Webseiten: Die Icons stehen im Kopf der Seite, der Rest ist egal).
+    """
     for _ in range(MAX_REDIRECTS + 1):
         scheme, host, port, ip, path = _validated_target(url)
         conn = (_PinnedHTTPS if scheme == "https" else _PinnedHTTP)(host, port, ip)
@@ -133,7 +137,7 @@ def fetch(url: str, max_bytes: int, deadline: float) -> Tuple[str, str, bytes]:
             if (response.getheader("Content-Encoding") or "identity").lower() != "identity":
                 raise FetchError("Die Webseite liefert komprimierte Daten, die nicht erlaubt sind.")
             length = response.getheader("Content-Length", "")
-            if length.isdigit() and int(length) > max_bytes:
+            if not truncate and length.isdigit() and int(length) > max_bytes:
                 raise FetchError("Die Datei ist zu groß.")
 
             chunks, total = [], 0
@@ -146,6 +150,9 @@ def fetch(url: str, max_bytes: int, deadline: float) -> Tuple[str, str, bytes]:
                         break
                     total += len(chunk)
                     if total > max_bytes:
+                        if truncate:
+                            chunks.append(chunk[: len(chunk) - (total - max_bytes)])
+                            break
                         raise FetchError("Die Datei ist zu groß.")
                     chunks.append(chunk)
             except (OSError, http.client.HTTPException) as exc:
@@ -213,7 +220,7 @@ def candidate_urls(page_url: str, html: str) -> List[str]:
 def search(shop_url: str) -> List[bytes]:
     """Sucht auf der Shop-Webseite nach Logos. Gibt fertige PNGs zurück (höchstens MAX_RESULTS)."""
     deadline = time.monotonic() + TOTAL_SECONDS
-    final_url, content_type, body = fetch(shop_url, MAX_PAGE_BYTES, deadline)
+    final_url, content_type, body = fetch(shop_url, MAX_PAGE_BYTES, deadline, truncate=True)
     html = body.decode("utf-8", errors="replace") if "html" in content_type or not content_type else ""
     results: List[bytes] = []
     for url in candidate_urls(final_url, html):

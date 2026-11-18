@@ -280,9 +280,13 @@ def test_weiterleitung_zu_erlaubtem_ziel_und_schleife(shop):
 
 
 def test_grenzen_fuer_groesse_kompression_und_fehler(shop, monkeypatch):
-    shop.routes["/riesig"] = (200, {"Content-Type": "text/html"}, b"x" * (logofetch.MAX_PAGE_BYTES + 10))
-    with pytest.raises(logofetch.FetchError, match="zu groß"):
-        logofetch.search(shop.url + "/riesig")
+    # Eine riesige Seite ist kein Fehler: Es wird nur der Anfang gelesen, dort stehen die Icons.
+    shop.routes["/riesig"] = (200, {"Content-Type": "text/html"}, PAGE + b"x" * (logofetch.MAX_PAGE_BYTES * 3))
+    assert len(logofetch.search(shop.url + "/riesig")) == 2
+    _, _, body = logofetch.fetch(shop.url + "/riesig", 1000, 1e12, truncate=True)
+    assert len(body) == 1000
+    with pytest.raises(logofetch.FetchError, match="zu groß"):    # Bilder dagegen werden nie abgeschnitten
+        logofetch.fetch(shop.url + "/riesig", 1000, 1e12)
     shop.routes["/gzip"] = (200, {"Content-Type": "text/html", "Content-Encoding": "gzip"}, b"\x1f\x8b")
     with pytest.raises(logofetch.FetchError, match="komprimiert"):
         logofetch.search(shop.url + "/gzip")
