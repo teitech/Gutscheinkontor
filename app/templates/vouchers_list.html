@@ -71,6 +71,7 @@
         {% endif %}
       </span>
       <span class="voucher-meta">
+        {% if v.online_only %}<span class="badge badge-status">{{ _('Nur online') }}</span>{% endif %}
         {% if v.min_order_cents is not none %}<span class="muted">{{ _('ab') }} {{ v.min_order_text }}</span>{% endif %}
         <span class="badge badge-{{ v.urgency }}">{{ v.expiry_text }}{% if v.expires_text %} ({{ v.expires_text }}){% endif %}</span>
         {% if v.status_key not in ('aktiv',) %}<span class="badge badge-status">{{ v.status_label }}</span>{% endif %}

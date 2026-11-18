@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 import sqlite3
+from urllib.parse import urlsplit
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
@@ -47,6 +48,7 @@ MONEY_HINT = "Bitte gib einen Betrag wie 25 oder 25,50 an."
 KINDS = (("amount", "Betrag in Euro"), ("percent", "Prozent-Rabatt"), ("other", "Sonstiges"))
 KIND_KEYS = tuple(key for key, _ in KINDS)
 MAX_BENEFIT_LENGTH = 100
+MAX_URL_LENGTH = 500
 
 
 # --- Eingaben lesen -------------------------------------------------------------
@@ -68,6 +70,38 @@ def parse_money(text: str) -> Optional[int]:
     if cents > MAX_VALUE_CENTS:
         raise ValueError("Der Betrag ist zu groß.")
     return cents
+
+
+def parse_shop_url(text: str) -> str:
+    """Prüft die Shop-Adresse. Nur http und https, ohne Zugangsdaten. 'shop.de' wird zu 'https://shop.de'.
+
+    Leer -> ''. Sonst ValueError. Das Schema wird streng geprüft, weil die Adresse später als Link
+    erscheint ('javascript:' und Ähnliches darf nie ankommen).
+    """
+    t = text.strip()
+    if not t:
+        return ""
+    if len(t) > MAX_URL_LENGTH:
+        raise ValueError(f"Höchstens {MAX_URL_LENGTH} Zeichen.")
+    if any(ord(c) < 33 or ord(c) == 127 for c in t):
+        raise ValueError("Die Adresse darf keine Leerzeichen oder Steuerzeichen enthalten.")
+    if any(c in t for c in "<>\"'`\\"):
+        raise ValueError("Die Adresse enthält ungültige Zeichen.")
+    if "://" not in t:
+        if re.match(r"^[a-zA-Z][a-zA-Z0-9+.-]*:", t) and not re.match(r"^[^/]*\.[^/]*:\d+(/|$)", t):
+            raise ValueError("Bitte gib eine Adresse mit http:// oder https:// an.")
+        t = "https://" + t
+    try:
+        parts = urlsplit(t)
+        host = parts.hostname
+        parts.port  # prüft den Port
+    except ValueError as exc:
+        raise ValueError("Das ist keine gültige Adresse.") from exc
+    if parts.scheme not in ("http", "https"):
+        raise ValueError("Bitte gib eine Adresse mit http:// oder https:// an.")
+    if not host or "." not in host or parts.username or parts.password:
+        raise ValueError("Das ist keine gültige Adresse.")
+    return t
 
 
 def parse_date(text: str) -> Optional[str]:
@@ -121,6 +155,8 @@ class VoucherData:
     percent: Optional[int] = None
     benefit_text: str = ""
     min_order_cents: Optional[int] = None
+    shop_url: str = ""
+    online_only: bool = False
 
 
 def validate_form(
@@ -180,6 +216,13 @@ def validate_form(
     except ValueError as exc:
         errors["min_order"] = str(exc)
 
+    shop_url = ""
+    try:
+        shop_url = parse_shop_url(form.get("shop_url", ""))
+    except ValueError as exc:
+        errors["shop_url"] = str(exc)
+    online_only = form.get("online_only", "").strip().lower() in ("on", "1", "true")
+
     expires_on = None
     try:
         expires_on = parse_date(form.get("expires_on", ""))
@@ -208,7 +251,7 @@ def validate_form(
         return None, errors
     return (
         VoucherData(title, code, value, remaining, expires_on, owner, notes, tags,
-                    kind, percent, benefit_text, min_order),
+                    kind, percent, benefit_text, min_order, shop_url, online_only),
         errors,
     )
 
@@ -227,6 +270,11 @@ def status_key(v: Mapping[str, Any], today: date) -> str:
     if value is not None and rest is not None and 0 < rest < value:
         return "teilweise"
     return "aktiv"
+
+
+def shop_host(url: str) -> str:
+    """Nur der Rechnername für die Anzeige, z. B. 'www.hagebau.de'."""
+    return urlsplit(url).hostname or "" if url else ""
 
 
 def benefit_label(v: Mapping[str, Any]) -> str:
@@ -248,6 +296,7 @@ def to_view(v: Mapping[str, Any], today: date) -> Dict[str, Any]:
         value_text=formatting.format_euro(v["value_cents"]),
         benefit_label=benefit_label(v),
         min_order_text=formatting.format_euro(v["min_order_cents"]),
+        shop_host=shop_host(v["shop_url"]),
         remaining_text=formatting.format_euro(v["remaining_cents"]),
         expires_text=formatting.format_date(v["expires_on"]),
         expiry_text=formatting.expiry_text(v["expires_on"], today),
@@ -364,12 +413,13 @@ def create_voucher(db: sqlite3.Connection, data: VoucherData, created_by: int) -
     cur = db.execute(
         "INSERT INTO vouchers (title, code_enc, value_cents, remaining_cents, expires_on, state, "
         "owner_user_id, notes, created_by, created_at, updated_at, expiry_set_on, "
-        "kind, percent, benefit_text, min_order_cents) "
-        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        "kind, percent, benefit_text, min_order_cents, shop_url, online_only) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         (data.title, security.encrypt(data.code) if data.code else None, data.value_cents,
          data.remaining_cents, data.expires_on, state, data.owner_user_id, data.notes,
          created_by, now, now, dates.today().isoformat(),
-         data.kind, data.percent, data.benefit_text, data.min_order_cents),
+         data.kind, data.percent, data.benefit_text, data.min_order_cents,
+         data.shop_url, int(data.online_only)),
     )
     set_tags(db, cur.lastrowid, data.tags)
     return cur.lastrowid
@@ -389,11 +439,11 @@ def update_voucher(db: sqlite3.Connection, voucher_id: int, data: VoucherData) -
     db.execute(
         "UPDATE vouchers SET title=?, code_enc=?, value_cents=?, remaining_cents=?, expires_on=?, "
         "state=?, owner_user_id=?, notes=?, updated_at=?, expiry_set_on=?, "
-        "kind=?, percent=?, benefit_text=?, min_order_cents=? WHERE id=?",
+        "kind=?, percent=?, benefit_text=?, min_order_cents=?, shop_url=?, online_only=? WHERE id=?",
         (data.title, security.encrypt(data.code) if data.code else None, data.value_cents,
          data.remaining_cents, data.expires_on, state, data.owner_user_id, data.notes,
          _now_iso(), expiry_set_on, data.kind, data.percent, data.benefit_text,
-         data.min_order_cents, voucher_id),
+         data.min_order_cents, data.shop_url, int(data.online_only), voucher_id),
     )
     set_tags(db, voucher_id, data.tags)
     return True

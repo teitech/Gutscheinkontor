@@ -19,6 +19,13 @@
     <dt>{{ _('Restwert') }}</dt><dd><strong>{{ v.remaining_text }}</strong></dd>
     {% endif %}
     {% if v.min_order_cents is not none %}<dt>{{ _('Mindestbestellwert') }}</dt><dd>{{ v.min_order_text }}</dd>{% endif %}
+    {% if v.online_only or v.shop_url %}
+    <dt>{{ _('Einlösen') }}</dt>
+    <dd>
+      {% if v.online_only %}<span class="badge badge-status">{{ _('Nur online') }}</span>{% endif %}
+      {% if v.shop_url %}<a href="{{ v.shop_url }}" target="_blank" rel="noopener noreferrer nofollow">{{ v.shop_host }}</a>{% endif %}
+    </dd>
+    {% endif %}
     <dt>{{ _('Gültig bis') }}</dt>
     <dd>{% if v.expires_text %}{{ v.expires_text }} <span class="badge badge-{{ v.urgency }}">{{ v.expiry_text }}</span>{% else %}{{ _('Kein Ablaufdatum') }}{% endif %}</dd>
     {% if v.owner_name %}<dt>{{ _('Zugehörig zu') }}</dt><dd>{{ v.owner_name }}</dd>{% endif %}

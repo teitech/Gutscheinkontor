@@ -136,7 +136,7 @@ def test_zip_export_inhalt(me):
     assert r.headers["cache-control"] == "no-store"
     archive, document = read_zip(r)
 
-    assert document["format"] == "gutscheinkontor-export" and document["format_version"] == 2
+    assert document["format"] == "gutscheinkontor-export" and document["format_version"] == 3
     assert document["includes_codes"] is True and len(document["vouchers"]) == 3
     first = document["vouchers"][0]
     assert first["title"] == "Müller Möbel" and first["code"] == "ABC-123"
@@ -198,8 +198,9 @@ def test_csv_export(me):
     assert first[2] == "Betrag in Euro"
     assert first[3] == "1234,50" and first[4] == "1234,50"             # deutsches Zahlenformat
     assert first[5] == "" and first[6] == "" and first[7] == ""         # Prozent, Vorteil, Mindestwert
-    assert first[8] == "24.12.2026" and first[9] == "Aktiv" and first[10] == "Anna"
-    assert first[11] == "a, b" and first[12] == "Mit; Semikolon\nund Zeilenumbruch"
+    assert first[8] == "" and first[9] == ""                            # Nur online, Shop-Adresse
+    assert first[10] == "24.12.2026" and first[11] == "Aktiv" and first[12] == "Anna"
+    assert first[13] == "a, b" and first[14] == "Mit; Semikolon\nund Zeilenumbruch"
     assert rows[2][0] == 'Müller, Möbel "groß"'
 
 
@@ -346,7 +347,7 @@ def test_ungueltige_zeitstempel_werden_ersetzt(me):
     (make_zip(raw_json="{kaputt"), "nicht lesbar"),
     (make_zip(raw_json="[]"), "kein Export des Gutscheinkontors"),
     (make_zip(doc(format="anderes-programm")), "kein Export des Gutscheinkontors"),
-    (make_zip(doc(format_version=3)), "neueren Version"),
+    (make_zip(doc(format_version=4)), "neueren Version"),
     (make_zip(doc(format_version="1")), "Versionsangabe"),
     (make_zip(doc(format_version=True)), "Versionsangabe"),
     (make_zip({"format": transfer.FORMAT_NAME, "format_version": 1, "vouchers": "nein"}), "Liste der Gutscheine"),

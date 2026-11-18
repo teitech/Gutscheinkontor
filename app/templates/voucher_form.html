@@ -55,6 +55,17 @@
       {% if errors.min_order %}<span class="field-error">{{ errors.min_order }}</span>{% endif %}
     </label>
 
+    <label>{{ _('Webshop-Adresse') }}
+      <input type="text" name="shop_url" value="{{ form.shop_url }}" maxlength="500" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://www.hagebau.de">
+      <span class="hint">{{ _('Optional. Dort kannst du den Gutschein einlösen.') }}</span>
+      {% if errors.shop_url %}<span class="field-error">{{ errors.shop_url }}</span>{% endif %}
+    </label>
+
+    <label class="check">
+      <input type="checkbox" name="online_only" value="on" {% if form.online_only %}checked{% endif %}>
+      <span>{{ _('Nur online einlösbar (nicht in der Filiale)') }}</span>
+    </label>
+
     <label>{{ _('Gültig bis') }}
       <input type="date" name="expires_on" value="{{ form.expires_on }}">
       <span class="hint">{{ _('Leer lassen, wenn der Gutschein nicht abläuft.') }}</span>

@@ -26,7 +26,7 @@ from .config import get_settings
 from .db import transaction
 
 FORMAT_NAME = "gutscheinkontor-export"
-FORMAT_VERSION = 2  # 2: Art des Vorteils (Prozent, Freitext) und Mindestbestellwert
+FORMAT_VERSION = 3  # 2: Art des Vorteils und Mindestbestellwert, 3: Shop-Adresse und "nur online"
 JSON_MEMBER = "export.json"
 
 MAX_JSON_BYTES = 20 * 1024 * 1024
@@ -104,6 +104,8 @@ def build_export_zip(db: sqlite3.Connection, include_codes: bool):
                 "percent": v["percent"],
                 "benefit_text": v["benefit_text"],
                 "min_order_cents": v["min_order_cents"],
+                "shop_url": v["shop_url"],
+                "online_only": bool(v["online_only"]),
                 "expires_on": v["expires_on"],
                 "state": v["state"],
                 "owner_email": v["owner_email"],
@@ -128,7 +130,7 @@ def build_export_zip(db: sqlite3.Connection, include_codes: bool):
 
 
 CSV_HEADER = ["Name", "Code", "Art", "Wert", "Restwert", "Prozent", "Vorteil (Text)",
-              "Mindestbestellwert", "Ablaufdatum", "Status", "Zugehörig zu",
+              "Mindestbestellwert", "Nur online", "Shop-Adresse", "Ablaufdatum", "Status", "Zugehörig zu",
               "Schlagwörter", "Notizen", "Angelegt am"]
 
 
@@ -163,6 +165,8 @@ def build_csv(db: sqlite3.Connection, include_codes: bool) -> bytes:
             str(v["percent"] or ""),
             v["benefit_text"],
             _money_text(v["min_order_cents"]),
+            "ja" if v["online_only"] else "",
+            v["shop_url"],
             formatting.format_date(v["expires_on"]),
             vouchers.STATUS_LABELS[vouchers.status_key(v, today)],
             owner_names.get(v["owner_user_id"], ""),
@@ -225,6 +229,14 @@ def _cents(value: Any, label: str) -> str:
     return _money_text(value)
 
 
+def _flag(value: Any, label: str) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, bool):
+        return value
+    raise ValueError(f"{label} muss wahr oder falsch sein.")
+
+
 def _percent(value: Any) -> str:
     if value is None:
         return ""
@@ -252,6 +264,8 @@ def _entry_to_form(entry: Dict[str, Any], owners: Dict[str, int]) -> Tuple[Dict[
         "percent": _percent(entry.get("percent")),
         "benefit_text": _text(entry.get("benefit_text"), "benefit_text"),
         "min_order": _cents(entry.get("min_order_cents"), "min_order_cents"),
+        "shop_url": _text(entry.get("shop_url"), "shop_url"),
+        "online_only": "on" if _flag(entry.get("online_only"), "online_only") else "",
         "expires_on": _text(entry.get("expires_on"), "expires_on"),
         "owner": str(owner_id) if owner_id else "",
         "notes": _text(entry.get("notes"), "notes"),

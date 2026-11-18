@@ -65,6 +65,7 @@ Administratoren können Nutzer sperren (sofort abgemeldet, Anmeldung nicht mehr 
 
 - Pro Gutschein: Name oder Firma, Code (verschlüsselt), Art und Wert (siehe unten), Restwert, Ablaufdatum, zugehörige Person, Schlagwörter, Notizen und Anhänge.
 - Drei Arten: **Betrag in Euro**, **Prozent-Rabatt** (z. B. „10 % auf den nächsten Einkauf“) und **Sonstiges** mit freiem Text (z. B. „Gratis-Versand“). Bei Prozent und Sonstiges gibt es keinen Restwert, der Gutschein ist offen oder eingelöst.
+- Optional lässt sich eine **Webshop-Adresse** hinterlegen (nur `http`/`https`, der Link öffnet in einem neuen Tab) und mit **„Nur online einlösbar“** markieren. Der Hinweis erscheint in Liste, Detailansicht und Erinnerungsmail.
 - Optional hat jeder Gutschein einen **Mindestbestellwert**. Er steht in Liste, Detailansicht und Erinnerungsmail.
 - Teilbeträge lassen sich einlösen (bei Betrags-Gutscheinen). Der Restwert wird mitgeführt, bei 0 gilt der Gutschein als eingelöst.
 - „Abgelaufen“ und „teilweise eingelöst“ werden aus Datum und Restwert berechnet. Gutscheine lassen sich archivieren oder löschen.

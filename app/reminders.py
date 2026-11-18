@@ -46,6 +46,8 @@ class Item:
     stage: int
     benefit: str = ""          # bei Prozent oder Freitext, sonst leer
     min_order_cents: Optional[int] = None
+    shop_url: str = ""
+    online_only: bool = False
 
 
 def current_stage(days_left: int, stages: Tuple[int, ...]) -> Optional[int]:
@@ -64,7 +66,7 @@ def pending(db: sqlite3.Connection, today: date, stages: Tuple[int, ...]):
     result: Dict[int, Tuple[sqlite3.Row, List[Item]]] = {}
     rows = db.execute(
         "SELECT id, title, expires_on, expiry_set_on, remaining_cents, owner_user_id, "
-        "kind, percent, benefit_text, min_order_cents "
+        "kind, percent, benefit_text, min_order_cents, shop_url, online_only "
         "FROM vouchers WHERE state = 'open' AND expires_on IS NOT NULL"
     ).fetchall()
     for v in rows:
@@ -93,7 +95,7 @@ def pending(db: sqlite3.Connection, today: date, stages: Tuple[int, ...]):
                 continue
             benefit = vouchers.benefit_label(v) if v["kind"] != "amount" else ""
             item = Item(v["id"], v["title"], v["expires_on"], days_left, v["remaining_cents"], stage,
-                        benefit, v["min_order_cents"])
+                        benefit, v["min_order_cents"], v["shop_url"], bool(v["online_only"]))
             result.setdefault(user_id, (users[user_id], []))[1].append(item)
     for _, items in result.values():
         items.sort(key=lambda i: (i.days_left, i.title.casefold()))
@@ -119,9 +121,13 @@ def build_mail(display_name: str, items: List[Item], today: date) -> Tuple[str, 
             rest = f", {item.benefit}"
         if item.min_order_cents is not None:
             rest += f", ab {formatting.format_euro(item.min_order_cents)} Warenkorb"
+        if item.online_only:
+            rest += ", nur online einlösbar"
         sentence = formatting.expiry_sentence(item.expires_on, today)
         lines.append(f"- {item.title}: {sentence} ({formatting.format_date(item.expires_on)}){rest}")
         lines.append(f"  {settings.base_url}/vouchers/{item.voucher_id}")
+        if item.shop_url:
+            lines.append(f"  Shop: {item.shop_url}")
     lines += [
         "",
         "Aus Sicherheitsgründen steht der Gutscheincode nicht in dieser Mail.",
