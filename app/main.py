@@ -21,6 +21,7 @@ from .routes_settings import router as settings_router
 from .routes_transfer import router as transfer_router
 from .routes_users import router as users_router
 from .routes_vouchers import router as voucher_router
+from .routes_logos import router as logos_router
 from .templating import BASE_DIR, Redirect, render
 
 settings = get_settings()
@@ -69,6 +70,7 @@ app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
 app.include_router(auth_router)
 app.include_router(reset_router)
 app.include_router(voucher_router)
+app.include_router(logos_router)
 app.include_router(settings_router)
 app.include_router(transfer_router)
 app.include_router(backups_router)

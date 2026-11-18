@@ -16,6 +16,7 @@ import zipfile
 
 import httpx
 import pyotp
+from PIL import Image
 
 BASE = sys.argv[1].rstrip("/") if len(sys.argv) > 1 else "http://127.0.0.1:8000"
 PASSWORD = "rauchtest-passwort-12345"
@@ -89,6 +90,17 @@ def main() -> None:
                     files={"file": ("evil.png", b"#!/bin/sh\necho hi\n", "image/png")})
     check(r.status_code == 400, "Ein Skript als .png wird abgelehnt")
 
+    # --- Logo -------------------------------------------------------------------------------------------
+    buffer = io.BytesIO()
+    Image.new("RGB", (300, 150), (10, 90, 90)).save(buffer, "PNG")
+    r = client.post(f"{detail_url}/logo", data={"csrf_token": csrf()}, files={"file": ("logo.png", buffer.getvalue(), "image/png")})
+    check(r.status_code == 303, "Logo wird hochgeladen")
+    r = client.get(f"{detail_url}/logo")
+    check(r.status_code == 200 and r.headers["content-type"] == "image/png"
+          and Image.open(io.BytesIO(r.content)).size == (128, 64), "Logo wird verkleinert ausgeliefert")
+    r = client.post(f"{detail_url}/logo", data={"csrf_token": csrf()}, files={"file": ("evil.png", b"#!/bin/sh\n", "image/png")})
+    check(r.status_code == 400, "Ein Skript als Logo wird abgelehnt")
+
     # --- Export und Import ----------------------------------------------------------------------------
     r = client.post("/data/export.zip", data={"csrf_token": csrf(), "include_codes": "on"})
     check(r.status_code == 200 and r.headers["content-type"] == "application/zip", "ZIP-Export wird geliefert")
@@ -96,6 +108,7 @@ def main() -> None:
     with zipfile.ZipFile(io.BytesIO(export)) as archive:
         check(archive.testzip() is None and "export.json" in archive.namelist(), "Export-ZIP ist gültig")
         check(b"SMOKE-CODE-42" in archive.read("export.json"), "Export enthält den Gutschein")
+        check(any(n.startswith("logos/") for n in archive.namelist()), "Export enthält das Logo")
     r = client.post("/data/export.csv", data={"csrf_token": csrf()})
     check(r.status_code == 200 and r.content.startswith(b"\xef\xbb\xbf"), "CSV-Export mit BOM")
 

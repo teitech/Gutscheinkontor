@@ -64,6 +64,7 @@ def _render_detail(request: Request, db: sqlite3.Connection, voucher_id: int,
     return render(
         request, "voucher_detail.html", status_code=status_code,
         v=vouchers.to_view(voucher, dates.today()), code=code, code_readable=readable,
+        logo_fetch_enabled=settings.logo_fetch_enabled,
         files=files, can_upload=len(files) < attachments.MAX_ATTACHMENTS_PER_VOUCHER,
         max_upload_mb=settings.max_upload_mb, max_files=attachments.MAX_ATTACHMENTS_PER_VOUCHER,
         **extra,

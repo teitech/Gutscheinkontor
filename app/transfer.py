@@ -21,12 +21,12 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from . import attachments, dates, formatting, vouchers
+from . import attachments, dates, formatting, logos, vouchers
 from .config import get_settings
 from .db import transaction
 
 FORMAT_NAME = "gutscheinkontor-export"
-FORMAT_VERSION = 3  # 2: Art des Vorteils und Mindestbestellwert, 3: Shop-Adresse und "nur online"
+FORMAT_VERSION = 4  # 2: Art und Mindestbestellwert, 3: Shop-Adresse und "nur online", 4: Logos
 JSON_MEMBER = "export.json"
 
 MAX_JSON_BYTES = 20 * 1024 * 1024
@@ -35,6 +35,7 @@ MAX_VOUCHERS = 10_000
 MAX_TOTAL_BYTES = 1024 * 1024 * 1024  # Obergrenze für alle entpackten Daten zusammen
 MAX_REPORT_LINES = 50
 
+LOGO_MEMBER_RE = re.compile(r"^logos/\d{4}\.png$")
 ATTACHMENT_MEMBER_RE = re.compile(r"^attachments/\d{4}_\d{2}\.(pdf|png|jpg|webp)$")
 TIMESTAMP_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 VALID_STATES = ("open", "redeemed", "archived")
@@ -72,6 +73,7 @@ def _load_for_export(db: sqlite3.Connection):
 def build_export_zip(db: sqlite3.Connection, include_codes: bool):
     """Baut das ZIP in einer temporären Datei. Der Aufrufer schließt sie nach dem Senden."""
     rows, tags, files = _load_for_export(db)
+    logo_images = logos.all_logos(db)
     tmp = tempfile.TemporaryFile()
     items = []
     with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as archive:
@@ -82,6 +84,10 @@ def build_export_zip(db: sqlite3.Connection, include_codes: bool):
                 if not readable:
                     code = ""
             listed = []
+            logo_member = None
+            if v["id"] in logo_images:
+                logo_member = f"logos/{index:04d}.png"
+                archive.writestr(logo_member, logo_images[v["id"]], compress_type=zipfile.ZIP_STORED)
             for n, a in enumerate(files.get(v["id"], []), start=1):
                 path = attachments.path_for(a["stored_name"])
                 if path is None or not path.is_file():
@@ -113,6 +119,7 @@ def build_export_zip(db: sqlite3.Connection, include_codes: bool):
                 "tags": tags.get(v["id"], []),
                 "created_at": v["created_at"],
                 "updated_at": v["updated_at"],
+                "logo": logo_member,
                 "attachments": listed,
             })
         document = {
@@ -288,6 +295,25 @@ def _existing_keys(db: sqlite3.Connection) -> Set[Tuple[Any, ...]]:
     return keys
 
 
+def _import_logo(db, archive, names, entry, idx, voucher_id, report) -> None:
+    member = entry.get("logo")
+    if member is None:
+        return
+    # Nur Namen im festen Muster, die es im ZIP wirklich gibt. Nie als Pfad verwendet.
+    if not isinstance(member, str) or not LOGO_MEMBER_RE.match(member) or member not in names:
+        report.add_warning(f"Eintrag {idx}: Das Logo fehlt oder hat einen ungültigen Namen und wird übersprungen.")
+        return
+    try:
+        png = logos.process(_read_limited(archive, member, logos.MAX_INPUT_BYTES))
+    except (logos.LogoError, ImportFormatError):
+        report.add_warning(f"Eintrag {idx}: Das Logo ist kein brauchbares Bild und wird übersprungen.")
+        return
+    except Exception:  # noqa: BLE001 - beschädigtes ZIP-Mitglied
+        report.add_warning(f"Eintrag {idx}: Das Logo ließ sich nicht lesen und wird übersprungen.")
+        return
+    logos.save(db, voucher_id, png)
+
+
 def _import_attachments(db, archive, names, entry, idx, voucher_id, report, state) -> None:
     listed = entry.get("attachments", [])
     if not isinstance(listed, list):
@@ -372,6 +398,7 @@ def _import_entry(db, archive, names, entry, idx, owners, existing, skip_duplica
          voucher_id),
     )
     report.imported += 1
+    _import_logo(db, archive, names, entry, idx, voucher_id, report)
     _import_attachments(db, archive, names, entry, idx, voucher_id, report, state)
 
 

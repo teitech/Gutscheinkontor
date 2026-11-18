@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Logo auswählen') }} – Gutscheinkontor{% endblock %}
+{% block content %}
+<p><a href="/vouchers/{{ v.id }}">← {{ v.title }}</a></p>
+<section class="card">
+  <h1>{{ _('Logo auswählen') }}</h1>
+  {% if candidates %}
+  <p class="muted">{{ _('Gefunden auf') }} {{ host }}. {{ _('Klicke auf das passende Bild.') }}</p>
+  <ul class="logo-choices">
+    {% for c in candidates %}
+    <li>
+      <form method="post" action="/vouchers/{{ v.id }}/logo/choose">
+        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+        <input type="hidden" name="image" value="{{ c }}">
+        <button type="submit" class="logo-choice" aria-label="{{ _('Dieses Logo verwenden') }}"><img src="{{ c }}" alt="" width="96" height="96"></button>
+      </form>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p>{{ _('Auf der Webseite wurde kein brauchbares Logo gefunden.') }}</p>
+  <p class="muted">{{ _('Du kannst stattdessen ein eigenes Bild hochladen.') }}</p>
+  {% endif %}
+  <div class="actions"><a class="btn btn-secondary" href="/vouchers/{{ v.id }}">{{ _('Zurück') }}</a></div>
+</section>
+{% endblock %}

@@ -61,6 +61,8 @@ class Settings:
     backups_enabled: bool = True
     backup_keep: int = 7
     backup_hour: int = 3
+    # Logos von der Webseite des Shops holen (ruft fremde Server auf, deshalb standardmäßig aus).
+    logo_fetch_enabled: bool = False
     repo_url: str = "https://github.com/teitech/Gutscheinkontor"
 
     @property
@@ -156,4 +158,5 @@ def get_settings() -> Settings:
         not in ("0", "false", "no", "off"),
         backup_keep=int(os.environ.get("BACKUP_KEEP") or 7),
         backup_hour=int(os.environ.get("BACKUP_HOUR") or 3),
+        logo_fetch_enabled=os.environ.get("LOGO_FETCH", "0").strip().lower() in ("1", "true", "yes", "on"),
     )

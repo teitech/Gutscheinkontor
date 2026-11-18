@@ -61,7 +61,7 @@
   {% for v in vouchers %}
   <li>
     <a class="voucher-card" href="/vouchers/{{ v.id }}">
-      <span class="voucher-title">{{ v.title }}</span>
+      <span class="voucher-title">{% if v.logo_version %}<img class="voucher-logo" src="/vouchers/{{ v.id }}/logo?v={{ v.logo_version }}" alt="" width="32" height="32" loading="lazy">{% endif %}{{ v.title }}</span>
       <span class="voucher-amount">
         {% if v.kind != 'amount' %}{{ v.benefit_label }}
         {% elif v.value_cents is not none %}

@@ -66,6 +66,7 @@ Administratoren können Nutzer sperren (sofort abgemeldet, Anmeldung nicht mehr 
 - Pro Gutschein: Name oder Firma, Code (verschlüsselt), Art und Wert (siehe unten), Restwert, Ablaufdatum, zugehörige Person, Schlagwörter, Notizen und Anhänge.
 - Drei Arten: **Betrag in Euro**, **Prozent-Rabatt** (z. B. „10 % auf den nächsten Einkauf“) und **Sonstiges** mit freiem Text (z. B. „Gratis-Versand“). Bei Prozent und Sonstiges gibt es keinen Restwert, der Gutschein ist offen oder eingelöst.
 - Optional lässt sich eine **Webshop-Adresse** hinterlegen (nur `http`/`https`, der Link öffnet in einem neuen Tab) und mit **„Nur online einlösbar“** markieren. Der Hinweis erscheint in Liste, Detailansicht und Erinnerungsmail.
+- Jeder Gutschein kann ein **Logo** haben: ein eigenes Bild hochladen (PNG, JPEG, WebP, GIF, ICO) oder, wenn eingeschaltet, von der Webshop-Adresse holen und aus den gefundenen Bildern auswählen. Die App speichert immer ein selbst erzeugtes, verkleinertes PNG, nie das Original.
 - Optional hat jeder Gutschein einen **Mindestbestellwert**. Er steht in Liste, Detailansicht und Erinnerungsmail.
 - Teilbeträge lassen sich einlösen (bei Betrags-Gutscheinen). Der Restwert wird mitgeführt, bei 0 gilt der Gutschein als eingelöst.
 - „Abgelaufen“ und „teilweise eingelöst“ werden aus Datum und Restwert berechnet. Gutscheine lassen sich archivieren oder löschen.
@@ -75,6 +76,12 @@ Administratoren können Nutzer sperren (sofort abgemeldet, Anmeldung nicht mehr 
 ### Anhänge
 
 Erlaubt sind PDF, PNG, JPEG und WebP bis 10 MB (`MAX_UPLOAD_MB`), höchstens 10 pro Gutschein. Geprüft wird der tatsächliche Dateiinhalt, nicht der Dateiname. PDFs mit JavaScript oder eingebetteten Dateien werden abgelehnt, PDFs werden nur als Download ausgeliefert. **Das ist keine Virenprüfung.** Der Reverse Proxy muss Uploads in dieser Größe erlauben (bei nginx `client_max_body_size`, Caddy hat standardmäßig kein Limit).
+
+### Logos
+
+Zu jedem Gutschein lässt sich ein Logo hinzufügen. Hochladen geht immer (PNG, JPEG, WebP, GIF, ICO, bis 2 MB). Die App liest das Bild vollständig ein und speichert ein selbst erzeugtes PNG mit höchstens 128 Pixeln. Metadaten und Originaldatei bleiben nicht erhalten.
+
+Mit `LOGO_FETCH=1` gibt es zusätzlich den Knopf **„Logo von der Webseite holen“**: Die App ruft die Webshop-Adresse des Gutscheins ab, sucht dort Touch-Icons, Favicons und Vorschaubilder und zeigt sie zur Auswahl. Der Abruf läuft nur auf Knopfdruck (höchstens 10 Suchen pro Nutzer in 10 Minuten) und ist gegen Missbrauch gehärtet: nur http/https auf den Ports 80 und 443, interne Adressen (Heimnetz, localhost, Cloud-Metadaten) sind gesperrt, auch nach Weiterleitungen und DNS-Tricks, dazu Grenzen für Größe und Zeit. Ohne `LOGO_FETCH` ruft die App nie fremde Server auf.
 
 ## Erinnerungen
 
@@ -151,7 +158,7 @@ Vor dem Einspielen prüft die App die Datei (Aufbau, erlaubte Namen, Größe, In
 
 ## Datenschutz
 
-Gutscheinkontor lädt keine externen Ressourcen, nutzt keine Tracker und keine Analytics. Die einzige externe Verbindung ist der SMTP-Server, den du selbst konfigurierst. Die App schreibt keine Zugriffsprotokolle und keine Adressen oder Gutscheindaten ins Log.
+Gutscheinkontor lädt keine externen Ressourcen, nutzt keine Tracker und keine Analytics. Die einzige externe Verbindung ist der SMTP-Server, den du selbst konfigurierst. Nur wenn du `LOGO_FETCH=1` setzt, ruft die App zusätzlich auf Knopfdruck die Webseite des jeweiligen Shops ab (siehe „Logos“). Die App schreibt keine Zugriffsprotokolle und keine Adressen oder Gutscheindaten ins Log.
 
 ## Entwicklung
 

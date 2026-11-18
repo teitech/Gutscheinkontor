@@ -5,7 +5,7 @@
 
 <section class="card">
   <div class="page-head">
-    <h1>{{ v.title }}</h1>
+    <h1>{% if v.logo_version %}<img class="detail-logo" src="/vouchers/{{ v.id }}/logo?v={{ v.logo_version }}" alt="" width="48" height="48">{% endif %}{{ v.title }}</h1>
     <span class="badge badge-status">{{ v.status_label }}</span>
   </div>
 
@@ -90,6 +90,39 @@
   <p class="muted">{{ _('Der Betrag wird vom Restwert abgezogen. Bei 0 gilt der Gutschein als eingelöst.') }}</p>
 </section>
 {% endif %}
+
+<section class="card section">
+  <h2>{{ _('Logo') }}</h2>
+  {% if logo_error %}<p class="alert" role="alert">{{ logo_error }}</p>{% endif %}
+  {% if v.logo_version %}
+  <div class="logo-current">
+    <img src="/vouchers/{{ v.id }}/logo?v={{ v.logo_version }}" alt="" width="64" height="64" class="detail-logo">
+    <form method="post" action="/vouchers/{{ v.id }}/logo/delete">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      <button class="btn btn-secondary" type="submit">{{ _('Logo entfernen') }}</button>
+    </form>
+  </div>
+  {% endif %}
+  <form method="post" action="/vouchers/{{ v.id }}/logo" enctype="multipart/form-data" class="form inline-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <label>{{ _('Eigenes Bild hochladen') }}
+      <input type="file" name="file" accept=".png,.jpg,.jpeg,.webp,.gif,.ico,image/png,image/jpeg,image/webp,image/gif,image/x-icon" required>
+    </label>
+    <button class="btn" type="submit">{{ _('Hochladen') }}</button>
+  </form>
+  {% if logo_fetch_enabled %}
+    {% if v.shop_url %}
+    <form method="post" action="/vouchers/{{ v.id }}/logo/search" class="form">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      <button class="btn btn-secondary" type="submit">{{ _('Logo von der Webseite holen') }}</button>
+      <span class="hint">{{ _('Ruft die Webshop-Adresse dieses Gutscheins ab und zeigt gefundene Bilder zur Auswahl.') }}</span>
+    </form>
+    {% else %}
+    <p class="muted">{{ _('Mit einer Webshop-Adresse kann die App das Logo auch von der Webseite holen.') }}</p>
+    {% endif %}
+  {% endif %}
+  <p class="muted">{{ _('PNG, JPEG, WebP, GIF oder ICO, höchstens 2 MB. Das Bild wird verkleinert gespeichert.') }}</p>
+</section>
 
 <section class="card section">
   <h2>{{ _('Anhänge') }}</h2>

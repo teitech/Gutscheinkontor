@@ -361,7 +361,8 @@ def _now_iso() -> str:
 
 _SELECT = (
     "SELECT v.*, u.display_name AS owner_name, "
-    "(SELECT COUNT(*) FROM voucher_attachments a WHERE a.voucher_id = v.id) AS attachment_count "
+    "(SELECT COUNT(*) FROM voucher_attachments a WHERE a.voucher_id = v.id) AS attachment_count, "
+    "(SELECT updated_at FROM voucher_logos l WHERE l.voucher_id = v.id) AS logo_version "
     "FROM vouchers v LEFT JOIN users u ON u.id = v.owner_user_id"
 )
 
