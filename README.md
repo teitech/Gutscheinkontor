@@ -1,3 +1,5 @@
+<p align="center"><img src="app/static/logo.png" alt="Gutscheinkontor" width="160"></p>
+
 # Gutscheinkontor
 
 > ⚠️ **Privates Projekt, Nutzung auf eigene Gefahr.** Gutscheinkontor entsteht als privates Projekt mit KI-gestützter Entwicklung (Vibe-Coding). Es gibt keine Garantie und keinen Support. Vor dem produktiven Einsatz bitte Sicherheit und Datensicherung selbst prüfen.

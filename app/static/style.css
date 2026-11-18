@@ -59,6 +59,9 @@ a { color: var(--accent); }
 }
 
 .brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
   font-weight: 700;
   font-size: 1.15rem;
   text-decoration: none;
@@ -341,3 +344,5 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; word-break: 
 .form input[readonly] { color: var(--muted); }
 
 [hidden] { display: none !important; }
+
+.brand-logo { height: 2rem; width: auto; }

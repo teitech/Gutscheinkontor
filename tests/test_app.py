@@ -33,3 +33,12 @@ def test_keine_externen_ressourcen(client):
     r = client.get("/setup")
     assert "http://" not in r.text.replace("http://localhost", "")
     assert "cdn" not in r.text.lower()
+
+
+def test_logo_und_symbole_werden_ausgeliefert(client):
+    page = client.get("/setup").text
+    assert '/static/logo.png' in page and 'rel="apple-touch-icon"' in page
+    for name, kind in [("logo.png", "image/png"), ("favicon.ico", "image/"), ("icon-192.png", "image/png"),
+                       ("apple-touch-icon.png", "image/png")]:
+        r = client.get(f"/static/{name}")
+        assert r.status_code == 200 and r.headers["content-type"].startswith(kind) and len(r.content) > 500
