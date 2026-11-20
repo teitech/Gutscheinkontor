@@ -1,3 +1,5 @@
+from tests.conftest import csrf_value, do_setup
+
 def test_startseite_leitet_zur_einrichtung(client):
     r = client.get("/")
     assert r.status_code == 303 and r.headers["location"] == "/login"
@@ -42,3 +44,12 @@ def test_logo_und_symbole_werden_ausgeliefert(client):
                        ("apple-touch-icon.png", "image/png")]:
         r = client.get(f"/static/{name}")
         assert r.status_code == 200 and r.headers["content-type"].startswith(kind) and len(r.content) > 500
+
+
+def test_login_seite_zeigt_das_grosse_logo(client, clock):
+    do_setup(client, clock)
+    client.post("/logout", data={"csrf_token": csrf_value(client)})
+    page = client.get("/login").text
+    assert 'src="/static/login-logo.webp"' in page and "Deine Gutscheinverwaltung" in page
+    r = client.get("/static/login-logo.webp")
+    assert r.status_code == 200 and r.headers["content-type"] == "image/webp"
