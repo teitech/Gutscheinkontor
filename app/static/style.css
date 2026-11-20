@@ -1,35 +1,46 @@
 :root {
-  --bg: #f6f7f9;
+  /* Farben aus dem Logo: Gelb, Blau, Dunkelblau, Creme */
+  --brand-yellow: #fdb307;
+  --bg: #faf5e8;
   --surface: #ffffff;
-  --text: #1c1f24;
-  --muted: #5b6370;
-  --border: #dde1e7;
-  --accent: #0b6b57;
+  --text: #091b44;
+  --muted: #566078;
+  --border: #e4dcc6;
+  --accent: #0c5dbd;
   --accent-text: #ffffff;
+  --accent-soft: rgba(12, 93, 189, 0.10);
+  --warn: #c98a00;
+  --warn-soft: rgba(253, 179, 7, 0.20);
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #121417;
-    --surface: #1b1e23;
-    --text: #e8eaed;
-    --muted: #9aa3af;
-    --border: #2d3239;
-    --accent: #3fb59a;
-    --accent-text: #0b1512;
+    --bg: #0a1430;
+    --surface: #111d40;
+    --text: #eef1fa;
+    --muted: #a3adc8;
+    --border: #26345f;
+    --accent: #fdb307;
+    --accent-text: #091b44;
+    --accent-soft: rgba(253, 179, 7, 0.13);
+    --warn: #fdb307;
+    --warn-soft: rgba(253, 179, 7, 0.18);
     color-scheme: dark;
   }
 }
 
 :root[data-theme="dark"] {
-  --bg: #121417;
-  --surface: #1b1e23;
-  --text: #e8eaed;
-  --muted: #9aa3af;
-  --border: #2d3239;
-  --accent: #3fb59a;
-  --accent-text: #0b1512;
+  --bg: #0a1430;
+  --surface: #111d40;
+  --text: #eef1fa;
+  --muted: #a3adc8;
+  --border: #26345f;
+  --accent: #fdb307;
+  --accent-text: #091b44;
+  --accent-soft: rgba(253, 179, 7, 0.13);
+  --warn: #fdb307;
+  --warn-soft: rgba(253, 179, 7, 0.18);
   color-scheme: dark;
 }
 
@@ -55,7 +66,7 @@ a { color: var(--accent); }
   gap: 1rem;
   padding: 0.75rem 1rem;
   background: var(--surface);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 3px solid var(--brand-yellow);
 }
 
 .brand {
@@ -122,8 +133,8 @@ a { color: var(--accent); }
   background: rgba(192, 57, 43, 0.12);
 }
 
-.alert-warn { border-color: #b7791f; background: rgba(183, 121, 31, 0.14); }
-.alert-info { border-color: var(--accent); background: rgba(11, 107, 87, 0.12); }
+.alert-warn { border-color: var(--warn); background: var(--warn-soft); }
+.alert-info { border-color: var(--accent); background: var(--accent-soft); }
 
 .narrow { max-width: 28rem; margin: 0 auto; }
 
@@ -273,7 +284,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; word-break: 
 }
 
 .badge-ok { border-color: var(--accent); }
-.badge-soon { border-color: #b7791f; background: rgba(183, 121, 31, 0.16); }
+.badge-soon { border-color: var(--warn); background: var(--warn-soft); }
 .badge-expired { border-color: #c0392b; background: rgba(192, 57, 43, 0.14); }
 .badge-status { background: var(--bg); }
 
