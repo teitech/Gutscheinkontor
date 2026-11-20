@@ -36,12 +36,16 @@
   </main>
 
   <footer class="footer">
-    <p>
-      {{ _('Privates Projekt, Nutzung auf eigene Gefahr.') }}
-      <a href="{{ settings.repo_url }}#readme" rel="noopener">{{ _('Mehr dazu') }}</a>
-    </p>
     <p class="version">
-      {{ _('Version') }} {{ settings.version }}{% if settings.git_sha %} ({{ settings.git_sha[:7] }}){% endif %}
+      Gutscheinkontor &bull; {{ _('Version') }} {{ settings.version }}{% if settings.git_sha %} ({{ settings.git_sha[:7] }}){% endif %}
+    </p>
+    <p>
+      {{ _('Vibe-Coder') }} Björn Teichmann &bull; Coppenbrügge &bull;
+      <a href="https://btapps.de" rel="noopener noreferrer">btapps.de</a>
+    </p>
+    <p>
+      <a href="{{ settings.repo_url }}#readme" rel="noopener noreferrer">{{ _('Privates Projekt, Nutzung auf eigene Gefahr') }}</a> &bull;
+      <a href="https://github.com/teitech" rel="noopener noreferrer">github.com/teitech</a>
     </p>
   </footer>
   {% block scripts %}{% endblock %}
