@@ -16,6 +16,24 @@ Reverse Proxy. Die Beispiele unten funktionieren mit Caddy, Traefik, nginx und N
 5. **HSTS** (`Strict-Transport-Security`) setzt die App nicht selbst, weil sie hinter dem Proxy nicht
    weiß, ob außen HTTPS gilt. Aktiviere es am Proxy, sobald alles läuft.
 
+## Port an eine feste Adresse binden (Proxy auf einem anderen Rechner)
+
+Läuft dein Proxy auf einem anderen Rechner, muss er die App über das Netzwerk erreichen. Dann musst du den Port
+von `127.0.0.1` auf etwas anderes ändern. Es gibt zwei Möglichkeiten:
+
+- **`"8000:8000"`**: Die App lauscht auf allen Netzwerkkarten des Hosts. Das startet immer zuverlässig.
+  Beschränke den Zugriff auf deinen Proxy mit einer Firewall-Regel (z. B. Proxmox-Firewall oder `ufw`: Port 8000 nur
+  von der Adresse des Proxys).
+- **`"192.168.1.20:8000:8000"`** (feste Adresse des Hosts): Das ist sparsamer, hat aber eine Falle. Startet Docker
+  nach einem Neustart oder Backup, **bevor** der Host diese Adresse hat, scheitert der Start mit
+  `failed to bind host port … cannot assign requested address`. Der Container bleibt dann aus, auch mit
+  `restart: unless-stopped`. Prüfen kannst du es mit
+  `docker inspect -f '{{.State.Error}}' gutscheinkontor`. Hilft ein Warten auf das Netzwerk
+  (`After=network-online.target` im Docker-Dienst, `sudo systemctl edit docker`), bleibt die feste Adresse möglich.
+
+Solange der Container aus ist, verschickt die App keine Erinnerungen. Beim nächsten Start holt sie fällige Erinnerungen
+nach, solange der Gutschein noch nicht abgelaufen ist.
+
 ## FORWARDED_ALLOW_IPS: warum und was eintragen
 
 Die App begrenzt Fehlversuche beim Login pro Besucher-Adresse. Dafür muss sie die Adresse des Besuchers

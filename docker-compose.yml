@@ -24,6 +24,10 @@ services:
       - gutscheinkontor-data:/data
     # Nur an localhost binden, wenn ein Reverse Proxy auf demselben Host läuft.
     # Läuft der Proxy im selben Docker-Netzwerk, "ports" weglassen und stattdessen "expose" nutzen.
+    # Läuft der Proxy auf einem anderen Rechner, wird oft die Adresse dieses Hosts eingetragen
+    # (z. B. "192.168.1.20:8000:8000"). Achtung: Ist diese Adresse beim Start von Docker noch nicht
+    # da (typisch nach einem Neustart oder Backup), startet der Container nicht und bleibt aus.
+    # Siehe docs/reverse-proxy.md, Abschnitt "Port an eine feste Adresse binden".
     ports:
       - "127.0.0.1:8000:8000"
     security_opt:
