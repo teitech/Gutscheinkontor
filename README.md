@@ -45,6 +45,8 @@ Das Image kommt von der GitHub Container Registry. Willst du es selbst bauen, en
 
 Die App lauscht auf `127.0.0.1:8000`. Richte deinen Reverse Proxy darauf aus (Beispiele für Caddy, Traefik, nginx und Nginx Proxy Manager in [docs/reverse-proxy.md](docs/reverse-proxy.md)) und öffne die Adresse. Beim ersten Aufruf legst du das Administrator-Konto an und richtest die Zwei-Faktor-Anmeldung ein.
 
+**Proxy auf einem anderen Rechner?** Dann musst du den Port in der `docker-compose.yml` ändern (`"8000:8000"`, dazu eine Firewall-Regel nur für den Proxy). Binde ihn besser nicht an eine feste Adresse des Hosts: Ist die Adresse beim Start von Docker noch nicht da, etwa nach einem Neustart oder Backup, startet der Container nicht und bleibt aus. Details und Ausnahmen stehen in [docs/reverse-proxy.md](docs/reverse-proxy.md#port-an-eine-feste-adresse-binden-proxy-auf-einem-anderen-rechner).
+
 **Aktualisieren:** `docker compose pull && docker compose up -d`. Willst du eine feste Version, trage in der `.env` `GK_IMAGE=ghcr.io/teitech/gutscheinkontor:0.1.0` ein. Die Datenbank wird beim Start automatisch auf den neuen Stand gebracht. Erstelle vorher ein Backup (Export / Import → Jetzt ein Backup erstellen).
 
 **Daten:** Datenbank, Anhänge und Backups liegen im benannten Docker-Volume `gutscheinkontor-data`. Ein Bind-Mount ist möglich (Hinweise in `docker-compose.yml`), dann muss der Ordner dem Benutzer 10001 gehören, sonst bricht die App beim Start mit einer klaren Meldung ab.
