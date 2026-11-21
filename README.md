@@ -49,7 +49,7 @@ Die App lauscht auf `127.0.0.1:8000`. Richte deinen Reverse Proxy darauf aus (Be
 
 **Aktualisieren:** `docker compose pull && docker compose up -d`. Willst du eine feste Version, trage in der `.env` `GK_IMAGE=ghcr.io/teitech/gutscheinkontor:0.1.0` ein. Die Datenbank wird beim Start automatisch auf den neuen Stand gebracht. Erstelle vorher ein Backup (Export / Import → Jetzt ein Backup erstellen).
 
-**Daten:** Datenbank, Anhänge und Backups liegen im benannten Docker-Volume `gutscheinkontor-data`. Ein Bind-Mount ist möglich (Hinweise in `docker-compose.yml`), dann muss der Ordner dem Benutzer 10001 gehören, sonst bricht die App beim Start mit einer klaren Meldung ab.
+**Daten:** Datenbank, Anhänge und Backups liegen im benannten Docker-Volume `gutscheinkontor-data`. Ein Bind-Mount ist möglich (statt `gutscheinkontor-data:/data` dann `./data:/data` eintragen), dann muss der Ordner dem Benutzer 10001 gehören (`mkdir data && sudo chown 10001:10001 data`), sonst bricht die App beim Start mit einer klaren Meldung ab.
 
 **Logs:** Die App schreibt keine Zugriffsprotokolle, weil Einladungs- und Reset-Links ihren Token im Pfad tragen. Der Reverse Proxy führt sein eigenes Log, achte dort auf die Aufbewahrung (Datenschutz).
 

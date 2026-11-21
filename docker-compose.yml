@@ -1,34 +1,15 @@
-# ACHTUNG: Privates Projekt (Vibe-Coding), Nutzung auf eigene Gefahr.
-#
-# Start:
-#   cp .env.example .env     # dann SECRET_KEY und BASE_URL eintragen (siehe Kommentare dort)
-#   docker compose up -d
-#
-# Das Image kommt von der GitHub Container Registry. Zum Selbstbauen die Zeile "build: ." aktivieren
-# und "docker compose up -d --build" nutzen. Mit GK_IMAGE in .env lässt sich eine feste Version
-# festlegen, z. B. GK_IMAGE=ghcr.io/teitech/gutscheinkontor:1.0.0
+# Privates Projekt (Vibe-Coding), Nutzung auf eigene Gefahr.
+# Start: cp .env.example .env, SECRET_KEY und BASE_URL eintragen, dann: docker compose up -d
 services:
   gutscheinkontor:
     image: ${GK_IMAGE:-ghcr.io/teitech/gutscheinkontor:latest}
-    # build: .
     container_name: gutscheinkontor
     restart: unless-stopped
     env_file: .env
     volumes:
-      # Benanntes Volume: funktioniert ohne Rechte-Probleme. Es enthält Datenbank, Anhänge und die
-      # täglichen Backups und muss zusätzlich außerhalb gesichert werden (siehe README, "Backups").
-      #
-      # Alternative Bind-Mount, wenn du den Ordner selbst sehen willst: Ordner vorher anlegen und dem
-      # Container-Benutzer geben (mkdir data && sudo chown 10001:10001 data), dann statt der Zeile
-      # darunter "./data:/data" eintragen.
       - gutscheinkontor-data:/data
-    # Nur an localhost binden, wenn ein Reverse Proxy auf demselben Host läuft.
-    # Läuft der Proxy im selben Docker-Netzwerk, "ports" weglassen und stattdessen "expose" nutzen.
-    # Läuft der Proxy auf einem anderen Rechner, wird oft die Adresse dieses Hosts eingetragen
-    # (z. B. "192.168.1.20:8000:8000"). Achtung: Ist diese Adresse beim Start von Docker noch nicht
-    # da (typisch nach einem Neustart oder Backup), startet der Container nicht und bleibt aus.
-    # Siehe docs/reverse-proxy.md, Abschnitt "Port an eine feste Adresse binden".
     ports:
+      # Nur lokal erreichbar. Läuft dein Reverse Proxy auf einem anderen Rechner: siehe README.
       - "127.0.0.1:8000:8000"
     security_opt:
       - no-new-privileges:true
