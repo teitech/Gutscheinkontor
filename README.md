@@ -10,6 +10,14 @@ Gutscheinkontor verwaltet alle Gutscheine an einem Ort und erinnert rechtzeitig 
 
 Der geplante Umfang von Version 1 ist umgesetzt. Die Tests laufen bei jedem Push in GitHub Actions, dort wird das Image gebaut (amd64 und arm64) und unter amd64 wie im Betrieb gestartet und durchgeprüft. Version 0.1.0 ist als Docker-Image veröffentlicht (`ghcr.io/teitech/gutscheinkontor`, amd64 und arm64). Das Projekt ist jung: Rechne mit Ecken und Kanten und lies die Hinweise oben.
 
+## So sieht es aus
+
+<p align="center"><img src="docs/screenshots/uebersicht.webp" alt="Gutscheinübersicht mit Suche, Logos, Restwert und Ablauf-Hinweisen" width="720"></p>
+
+<p align="center"><img src="docs/screenshots/detail.webp" alt="Detailseite eines Gutscheins mit Vorteil, Ablaufdatum, Code, Logo und Anhängen" width="480"> <img src="docs/screenshots/login.webp" alt="Anmeldeseite mit Logo" width="480"></p>
+
+Die Beispieldaten in den Bildern sind erfunden.
+
 ## Funktionen
 
 - Gutscheine mit Ablaufdatum, Wert oder Prozent-Rabatt, Mindestbestellwert, Restwert, Schlagwörtern, Notizen und Anhängen, Code verschlüsselt gespeichert
