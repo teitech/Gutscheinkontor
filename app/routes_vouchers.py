@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import FileResponse, RedirectResponse
 from starlette.datastructures import UploadFile
 
-from . import attachments, dates, vouchers
+from . import attachments, dates, gifts, mail, vouchers
 from .config import get_settings
 from .db import get_db, transaction
 from .routes_auth import require_active, require_csrf
@@ -48,12 +48,26 @@ def _form_page(request, db, mode, form, errors, status_code=200, voucher=None):
     )
 
 
+GIFT_NOTICES = {
+    "sent": "Der Gutschein wurde per E-Mail weitergegeben.",
+    "partial": "Der Gutschein wurde weitergegeben, aber nicht alle Mails konnten verschickt werden. "
+               "Prüfe die Zahl der Empfänger unten.",
+    "recalled": "Die Weitergabe wurde zurückgeholt. Alle Links sind ungültig.",
+    "given": "Der Gutschein ist als verschenkt vermerkt.",
+    "undone": "Der Vermerk „verschenkt“ wurde entfernt.",
+}
+
+
 def _render_detail(request: Request, db: sqlite3.Connection, voucher_id: int,
                    status_code: int = 200, **extra: Any):
     voucher = vouchers.get_voucher(db, voucher_id)
     if voucher is None:
         raise HTTPException(status_code=404)
     code, readable = vouchers.decrypt_code(voucher)
+    view = vouchers.to_view(voucher, dates.today())
+    gift = gifts.describe(gifts.latest(db, voucher_id))
+    can_give = bool(view["is_open"] and code and (gift is None or gift["status"] != "open"))
+    extra.setdefault("gift_notice", GIFT_NOTICES.get(request.query_params.get("gift", "")))
     rows = db.execute(
         "SELECT * FROM voucher_attachments WHERE voucher_id = ? ORDER BY id", (voucher_id,)
     ).fetchall()
@@ -63,7 +77,9 @@ def _render_detail(request: Request, db: sqlite3.Connection, voucher_id: int,
     ]
     return render(
         request, "voucher_detail.html", status_code=status_code,
-        v=vouchers.to_view(voucher, dates.today()), code=code, code_readable=readable,
+        v=view, code=code, code_readable=readable, gift=gift, can_give=can_give,
+        gift_mail_enabled=mail.is_enabled(), max_recipients=gifts.MAX_RECIPIENTS,
+        gift_message_max=gifts.MAX_MESSAGE_LENGTH,
         logo_fetch_enabled=settings.logo_fetch_enabled,
         files=files, can_upload=len(files) < attachments.MAX_ATTACHMENTS_PER_VOUCHER,
         max_upload_mb=settings.max_upload_mb, max_files=attachments.MAX_ATTACHMENTS_PER_VOUCHER,

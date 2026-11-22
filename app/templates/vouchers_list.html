@@ -75,6 +75,7 @@
         {% if v.min_order_cents is not none %}<span class="muted">{{ _('ab') }} {{ v.min_order_text }}</span>{% endif %}
         <span class="badge badge-{{ v.urgency }}">{{ v.expiry_text }}{% if v.expires_text %} ({{ v.expires_text }}){% endif %}</span>
         {% if v.status_key not in ('aktiv',) %}<span class="badge badge-status">{{ v.status_label }}</span>{% endif %}
+        {% if v.gift_status == 'open' %}<span class="badge badge-status">{{ _('Angeboten an') }} {{ v.gift_recipients }}</span>{% endif %}
         {% if v.owner_name %}<span class="muted">{{ v.owner_name }}</span>{% endif %}
         {% if v.attachment_count %}<span class="muted">{{ _('Anhang') }} ×{{ v.attachment_count }}</span>{% endif %}
       </span>

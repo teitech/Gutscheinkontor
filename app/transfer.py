@@ -16,17 +16,18 @@ import json
 import re
 import sqlite3
 import tempfile
+import time
 import zipfile
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from . import attachments, dates, formatting, logos, vouchers
+from . import attachments, dates, formatting, gifts, logos, vouchers
 from .config import get_settings
 from .db import transaction
 
 FORMAT_NAME = "gutscheinkontor-export"
-FORMAT_VERSION = 4  # 2: Art und Mindestbestellwert, 3: Shop-Adresse und "nur online", 4: Logos
+FORMAT_VERSION = 5  # 2: Art und Mindestbestellwert, 3: Shop-Adresse und "nur online", 4: Logos, 5: Weitergabe-Vermerk
 JSON_MEMBER = "export.json"
 
 MAX_JSON_BYTES = 20 * 1024 * 1024
@@ -58,7 +59,7 @@ def _money_text(cents: Optional[int]) -> str:
 
 def _load_for_export(db: sqlite3.Connection):
     rows = db.execute(
-        "SELECT v.*, u.email AS owner_email FROM vouchers v "
+        "SELECT v.*, u.email AS owner_email, " + vouchers.GIFT_STATUS_SQL + " AS gift_status FROM vouchers v "
         "LEFT JOIN users u ON u.id = v.owner_user_id ORDER BY v.id"
     ).fetchall()
     tags: Dict[int, List[str]] = {}
@@ -67,12 +68,23 @@ def _load_for_export(db: sqlite3.Connection):
     files: Dict[int, List[sqlite3.Row]] = {}
     for r in db.execute("SELECT * FROM voucher_attachments ORDER BY voucher_id, id"):
         files.setdefault(r["voucher_id"], []).append(r)
-    return rows, tags, files
+    given: Dict[int, sqlite3.Row] = {}
+    for r in db.execute("SELECT * FROM voucher_gifts WHERE status = 'claimed' ORDER BY id"):
+        given[r["voucher_id"]] = r  # der jüngste Vermerk gewinnt
+    return rows, tags, files, given
+
+
+def _gift_entry(row: Optional[sqlite3.Row]) -> Optional[Dict[str, Any]]:
+    """Vermerk "weitergegeben" für den Export. Ohne E-Mail-Adressen von Empfängern, die nicht übernommen haben."""
+    if row is None:
+        return None
+    claimed = datetime.fromtimestamp(row["claimed_at"] or row["created_at"], timezone.utc)
+    return {"given_to": row["given_to"], "claimed_at": claimed.strftime("%Y-%m-%dT%H:%M:%SZ")}
 
 
 def build_export_zip(db: sqlite3.Connection, include_codes: bool):
     """Baut das ZIP in einer temporären Datei. Der Aufrufer schließt sie nach dem Senden."""
-    rows, tags, files = _load_for_export(db)
+    rows, tags, files, given = _load_for_export(db)
     logo_images = logos.all_logos(db)
     tmp = tempfile.TemporaryFile()
     items = []
@@ -120,6 +132,7 @@ def build_export_zip(db: sqlite3.Connection, include_codes: bool):
                 "created_at": v["created_at"],
                 "updated_at": v["updated_at"],
                 "logo": logo_member,
+                "gift": _gift_entry(given.get(v["id"])),
                 "attachments": listed,
             })
         document = {
@@ -151,7 +164,7 @@ def _csv_safe(text: str) -> str:
 def build_csv(db: sqlite3.Connection, include_codes: bool) -> bytes:
     """UTF-8 mit BOM und Semikolon, damit Excel (deutsch) Umlaute und Spalten richtig liest."""
     today = dates.today()
-    rows, tags, _files = _load_for_export(db)
+    rows, tags, _files, _given = _load_for_export(db)
     owner_names = {
         r["id"]: r["display_name"] for r in db.execute("SELECT id, display_name FROM users")
     }
@@ -351,6 +364,27 @@ def _import_attachments(db, archive, names, entry, idx, voucher_id, report, stat
         report.attachments_imported += 1
 
 
+def _import_gift(db, entry, voucher_id, created_by) -> None:
+    """Vermerk "weitergegeben" wiederherstellen (als persönliche Übergabe, die Links gibt es nicht mehr)."""
+    gift = entry.get("gift")
+    if not isinstance(gift, dict):
+        return
+    given_to = gift.get("given_to")
+    given_to = given_to[:gifts.MAX_GIVEN_TO_LENGTH] if isinstance(given_to, str) else ""
+    claimed_at = gift.get("claimed_at")
+    stamp = int(time.time())
+    if isinstance(claimed_at, str) and TIMESTAMP_RE.match(claimed_at):
+        try:
+            stamp = int(datetime.strptime(claimed_at, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc).timestamp())
+        except ValueError:
+            pass
+    db.execute(
+        "INSERT INTO voucher_gifts (voucher_id, kind, status, given_to, created_by, created_at, "
+        "expires_at, claimed_at) VALUES (?, 'manual', 'claimed', ?, ?, ?, ?, ?)",
+        (voucher_id, given_to, created_by, stamp, stamp, stamp),
+    )
+
+
 def _import_entry(db, archive, names, entry, idx, owners, existing, skip_duplicates, created_by, report) -> None:
     if not isinstance(entry, dict):
         report.add_invalid(f"Eintrag {idx}: ist kein Objekt.")
@@ -398,6 +432,7 @@ def _import_entry(db, archive, names, entry, idx, owners, existing, skip_duplica
          voucher_id),
     )
     report.imported += 1
+    _import_gift(db, entry, voucher_id, created_by)
     _import_logo(db, archive, names, entry, idx, voucher_id, report)
     _import_attachments(db, archive, names, entry, idx, voucher_id, report, state)
 

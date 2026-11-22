@@ -91,6 +91,70 @@
 </section>
 {% endif %}
 
+<section class="card section" id="weitergeben">
+  <h2>{{ _('Weitergeben') }}</h2>
+  {% if gift_notice %}<p class="alert alert-info" role="status">{{ gift_notice }}</p>{% endif %}
+  {% if gift_error %}<p class="alert" role="alert">{{ gift_error }}</p>{% endif %}
+
+  {% if gift and gift.status == 'claimed' %}
+    {% if gift.kind == 'manual' %}
+    <p><strong>{{ _('Verschenkt') }}</strong>{% if gift.given_to %} {{ _('an') }} {{ gift.given_to }}{% endif %}, {{ gift.claimed_text }}.</p>
+    <form method="post" action="/vouchers/{{ v.id }}/gift/undo">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      <button class="btn btn-secondary" type="submit">{{ _('Doch behalten') }}</button>
+    </form>
+    {% else %}
+    <p><strong>{{ _('Weitergegeben') }}</strong>: {{ _('Übernommen von') }} {{ gift.given_to }} {{ _('am') }} {{ gift.claimed_text }}
+      ({{ _('verschickt an') }} {{ gift.recipient_count }} {{ _('Personen') }}).</p>
+    <p class="muted">{{ _('Die Person kennt den Code. Der Gutschein bekommt hier keine Erinnerungen mehr.') }}</p>
+    {% endif %}
+  {% elif gift and gift.status == 'open' %}
+    <p><strong>{{ _('Weitergegeben an') }} {{ gift.recipient_count }} {{ _('Personen') }}</strong> {{ _('am') }} {{ gift.created_text }}.
+      {{ _('Bisher hat ihn niemand übernommen. Die Links gelten bis') }} {{ gift.expires_text }}.</p>
+    <form method="post" action="/vouchers/{{ v.id }}/gift/recall">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      <button class="btn btn-secondary" type="submit">{{ _('Zurückholen') }}</button>
+    </form>
+    <p class="muted">{{ _('Beim Zurückholen werden alle Links ungültig. Der Gutschein bleibt bei dir.') }}</p>
+  {% elif gift and gift.status == 'expired' and gift.kind == 'link' %}
+    <p class="muted">{{ _('Zuletzt weitergegeben an') }} {{ gift.recipient_count }} {{ _('Personen') }} {{ _('am') }} {{ gift.created_text }}. {{ _('Niemand hat ihn übernommen, die Links sind abgelaufen.') }}</p>
+  {% elif gift and gift.status == 'revoked' %}
+    <p class="muted">{{ _('Zuletzt weitergegeben am') }} {{ gift.created_text }} {{ _('und wieder zurückgeholt.') }}</p>
+  {% endif %}
+
+  {% if can_give %}
+    <p><a class="btn btn-secondary" href="/vouchers/{{ v.id }}/pdf">{{ _('Als PDF speichern') }}</a></p>
+    {% if gift_mail_enabled %}
+    <h3>{{ _('Per E-Mail weitergeben') }}</h3>
+    <form method="post" action="/vouchers/{{ v.id }}/gift" class="form">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      <label>{{ _('E-Mail-Adressen') }}
+        <textarea name="recipients" rows="2" required placeholder="anna@example.de, ben@example.de">{{ gift_form_recipients or '' }}</textarea>
+        <span class="hint">{{ _('Bis zu') }} {{ max_recipients }}, {{ _('getrennt mit Komma oder Zeilenumbruch. Wer zuerst übernimmt, bekommt den Code.') }}</span>
+      </label>
+      <label>{{ _('Nachricht (optional)') }}
+        <textarea name="message" rows="2" maxlength="{{ gift_message_max }}">{{ gift_form_message or '' }}</textarea>
+      </label>
+      <button class="btn" type="submit">{{ _('Weitergeben') }}</button>
+      <span class="hint">{{ _('Die Mail enthält keinen Code, nur einen persönlichen Link. Er gilt 14 Tage, höchstens bis zum Ablauf des Gutscheins.') }}</span>
+    </form>
+    {% else %}
+    <p class="muted">{{ _('Zum Weitergeben per E-Mail muss auf dem Server der E-Mail-Versand eingerichtet sein.') }}</p>
+    {% endif %}
+
+    {% if not gift or gift.status != 'open' %}
+    <h3>{{ _('Persönlich verschenkt') }}</h3>
+    <form method="post" action="/vouchers/{{ v.id }}/gift/given" class="form inline-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      <label>{{ _('An wen? (optional)') }}
+        <input type="text" name="given_to" maxlength="100" value="{{ gift_form_given_to or '' }}">
+      </label>
+      <button class="btn btn-secondary" type="submit">{{ _('Als verschenkt vermerken') }}</button>
+    </form>
+    {% endif %}
+  {% endif %}
+</section>
+
 <section class="card section">
   <h2>{{ _('Logo') }}</h2>
   {% if logo_error %}<p class="alert" role="alert">{{ logo_error }}</p>{% endif %}

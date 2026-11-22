@@ -21,6 +21,7 @@ Die Beispieldaten in den Bildern sind erfunden.
 ## Funktionen
 
 - Gutscheine mit Ablaufdatum, Wert oder Prozent-Rabatt, Mindestbestellwert, Restwert, Schlagwörtern, Notizen und Anhängen, Code verschlüsselt gespeichert
+- Gutscheine weitergeben: per Mail-Link an mehrere Personen (wer zuerst übernimmt, bekommt ihn), als PDF oder als „verschenkt“ vermerkt
 - Erinnerungsmails vor dem Ablauf (standardmäßig 30, 7 und 1 Tag vorher)
 - Mehrere Nutzer (z. B. Familie) mit gemeinsamem Bestand, Einladung per Link
 - Login mit Passwort und Pflicht-Zwei-Faktor (TOTP), Passwort-Reset per E-Mail
@@ -92,6 +93,21 @@ Erlaubt sind PDF, PNG, JPEG und WebP bis 10 MB (`MAX_UPLOAD_MB`), höchstens 10 
 Zu jedem Gutschein lässt sich ein Logo hinzufügen. Hochladen geht immer (PNG, JPEG, WebP, GIF, ICO, bis 2 MB). Die App liest das Bild vollständig ein und speichert ein selbst erzeugtes PNG mit höchstens 128 Pixeln. Metadaten und Originaldatei bleiben nicht erhalten.
 
 Mit `LOGO_FETCH=1` gibt es zusätzlich den Knopf **„Logo von der Webseite holen“**: Die App ruft die Webshop-Adresse des Gutscheins ab, sucht dort Touch-Icons, Favicons und Vorschaubilder und zeigt sie zur Auswahl. Der Abruf läuft nur auf Knopfdruck (höchstens 10 Suchen pro Nutzer in 10 Minuten) und ist gegen Missbrauch gehärtet: nur http/https auf den Ports 80 und 443, interne Adressen (Heimnetz, localhost, Cloud-Metadaten) sind gesperrt, auch nach Weiterleitungen und DNS-Tricks, dazu Grenzen für Größe und Zeit. Ohne `LOGO_FETCH` ruft die App nie fremde Server auf.
+
+### Gutscheine weitergeben
+
+Brauchst du einen Gutschein nicht, kannst du ihn weitergeben. Auf der Detailseite gibt es den Bereich **„Weitergeben“**:
+
+- **Per E-Mail an eine oder mehrere Personen** (bis zu 10, optional mit Nachricht). Die Mail enthält **keinen Code**, nur einen persönlichen Link. Wer ihn öffnet und „Gutschein übernehmen“ wählt, sieht den Code und kann ein PDF speichern. **Wer zuerst übernimmt, bekommt den Gutschein.** Alle anderen Links werden sofort ungültig. Anhänge des Gutscheins (z. B. das Original-PDF) gibt es erst nach der Übernahme. Der Empfänger braucht kein Konto.
+- Du bekommst eine Mail, sobald jemand übernommen hat. Der Gutschein steht dann als „Weitergegeben“ im Kontor und bekommt keine Erinnerungen mehr.
+- Übernimmt niemand, bleibt der Gutschein bei dir offen, mit dem Hinweis „Weitergegeben an N Personen“. Du kannst ihn jederzeit **zurückholen** (alle Links erlöschen) oder selbst einlösen. Auch Einlösen oder Archivieren holt die Weitergabe zurück.
+- Die Links gelten 14 Tage, höchstens bis zum Ablauf des Gutscheins.
+- **Persönlich verschenkt:** ein reiner Vermerk ohne Mail, mit „Doch behalten“ zum Zurücknehmen.
+- **Als PDF speichern** geht für jeden offenen Gutschein.
+
+Voraussetzungen: Der E-Mail-Versand muss eingerichtet sein, und die Empfänger müssen deine App im Browser erreichen können (`BASE_URL` muss von außen stimmen). Läuft die App nur im Heimnetz, funktioniert die Übernahme dort nicht.
+
+Datenschutz: Die Adressen der Empfänger werden gelöscht, sobald die Weitergabe beendet ist (übernommen, zurückgeholt oder abgelaufen). Nur die Adresse der Person, die übernommen hat, bleibt am Vermerk stehen. Die Links werden nur als Hash gespeichert. Pro Nutzer sind höchstens 10 Weitergaben pro Stunde möglich.
 
 ## Erinnerungen
 

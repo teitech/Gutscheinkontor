@@ -136,7 +136,7 @@ def test_zip_export_inhalt(me):
     assert r.headers["cache-control"] == "no-store"
     archive, document = read_zip(r)
 
-    assert document["format"] == "gutscheinkontor-export" and document["format_version"] == 4
+    assert document["format"] == "gutscheinkontor-export" and document["format_version"] == 5
     assert document["includes_codes"] is True and len(document["vouchers"]) == 3
     first = document["vouchers"][0]
     assert first["title"] == "Müller Möbel" and first["code"] == "ABC-123"
@@ -347,7 +347,7 @@ def test_ungueltige_zeitstempel_werden_ersetzt(me):
     (make_zip(raw_json="{kaputt"), "nicht lesbar"),
     (make_zip(raw_json="[]"), "kein Export des Gutscheinkontors"),
     (make_zip(doc(format="anderes-programm")), "kein Export des Gutscheinkontors"),
-    (make_zip(doc(format_version=5)), "neueren Version"),
+    (make_zip(doc(format_version=6)), "neueren Version"),
     (make_zip(doc(format_version="1")), "Versionsangabe"),
     (make_zip(doc(format_version=True)), "Versionsangabe"),
     (make_zip({"format": transfer.FORMAT_NAME, "format_version": 1, "vouchers": "nein"}), "Liste der Gutscheine"),

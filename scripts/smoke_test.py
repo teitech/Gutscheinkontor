@@ -98,6 +98,8 @@ def main() -> None:
     r = client.get(f"{detail_url}/logo")
     check(r.status_code == 200 and r.headers["content-type"] == "image/png"
           and Image.open(io.BytesIO(r.content)).size == (128, 64), "Logo wird verkleinert ausgeliefert")
+    r = client.get(f"{detail_url}/pdf")
+    check(r.status_code == 200 and r.content.startswith(b"%PDF"), "Gutschein-PDF wird erzeugt")
     r = client.post(f"{detail_url}/logo", data={"csrf_token": csrf()}, files={"file": ("evil.png", b"#!/bin/sh\n", "image/png")})
     check(r.status_code == 400, "Ein Skript als Logo wird abgelehnt")
 

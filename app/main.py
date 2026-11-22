@@ -11,9 +11,9 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from . import backups, reminders, security
+from . import backups, gifts, reminders, security
 from .config import get_settings
-from .db import init_db
+from .db import connect, init_db
 from .routes_auth import router as auth_router
 from .routes_backups import router as backups_router
 from .routes_reset import router as reset_router
@@ -22,6 +22,7 @@ from .routes_transfer import router as transfer_router
 from .routes_users import router as users_router
 from .routes_vouchers import router as voucher_router
 from .routes_logos import router as logos_router
+from .routes_gifts import router as gifts_router
 from .templating import BASE_DIR, Redirect, render
 
 settings = get_settings()
@@ -36,10 +37,20 @@ if not _app_logger.handlers:
     _app_logger.setLevel(logging.INFO)
 
 
+def _sweep_gifts() -> None:
+    """Beendet abgelaufene Weitergaben und löscht Adressen, die nicht mehr gebraucht werden."""
+    db = connect()
+    try:
+        gifts.sweep(db)
+    finally:
+        db.close()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     settings.validate()  # ohne gültigen SECRET_KEY startet die App nicht
     init_db(clean_tmp=True)
+    _sweep_gifts()
     # Erinnerungen prüft ein Hintergrundlauf im selben Prozess (die App läuft mit einem Worker).
     # Ebenso die täglichen Backups.
     stop = asyncio.Event()
@@ -71,6 +82,7 @@ app.include_router(auth_router)
 app.include_router(reset_router)
 app.include_router(voucher_router)
 app.include_router(logos_router)
+app.include_router(gifts_router)
 app.include_router(settings_router)
 app.include_router(transfer_router)
 app.include_router(backups_router)

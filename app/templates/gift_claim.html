@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Gutschein übernehmen') }} – Gutscheinkontor{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>{{ _('Ein Gutschein für dich') }}</h1>
+  <p>{{ gift.giver_name or _('Jemand') }} {{ _('gibt dir diesen Gutschein weiter:') }}</p>
+  <div class="gift-box">
+    {% if logo %}<img class="detail-logo" src="{{ logo }}" alt="" width="48" height="48">{% endif %}
+    <h2>{{ v.title }}</h2>
+    <ul class="gift-facts">{% for line in facts %}<li>{{ line }}</li>{% endfor %}</ul>
+  </div>
+  {% if gift.message %}<blockquote class="gift-message">{{ gift.message }}</blockquote>{% endif %}
+  {% if gift.recipient_count > 1 %}
+  <p class="muted">{{ _('Der Gutschein wurde an mehrere Personen geschickt. Wer zuerst übernimmt, bekommt ihn.') }}</p>
+  {% endif %}
+  <p class="muted">{{ _('Der Code wird erst nach dem Übernehmen angezeigt. Dieser Link gilt bis') }} {{ gift.expires_text }}.</p>
+  <form method="post" action="/gift/{{ token }}/claim" class="form">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <button class="btn" type="submit">{{ _('Gutschein übernehmen') }}</button>
+  </form>
+</section>
+{% endblock %}

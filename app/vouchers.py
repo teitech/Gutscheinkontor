@@ -15,13 +15,14 @@ from datetime import date, datetime, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any, Dict, List, Mapping, Optional, Set, Tuple
 
-from . import dates, formatting, security
+from . import dates, formatting, gifts, security
 
 STATUS_LABELS = {
     "aktiv": "Aktiv",
     "teilweise": "Teilweise eingelöst",
     "abgelaufen": "Abgelaufen",
     "eingeloest": "Eingelöst",
+    "weitergegeben": "Weitergegeben",
     "archiviert": "Archiviert",
 }
 FILTER_OPTIONS = [
@@ -30,6 +31,7 @@ FILTER_OPTIONS = [
     ("teilweise", "Teilweise eingelöst"),
     ("abgelaufen", "Abgelaufen"),
     ("eingeloest", "Eingelöst"),
+    ("weitergegeben", "Weitergegeben"),
     ("archiviert", "Archiviert"),
     ("alle", "Alle"),
 ]
@@ -259,11 +261,20 @@ def validate_form(
 # --- Status ----------------------------------------------------------------------
 
 
+def _gift_status(v: Mapping[str, Any]) -> Optional[str]:
+    try:
+        return v["gift_status"]
+    except (KeyError, IndexError):  # Zeile ohne Weitergabe-Spalte (z. B. Export)
+        return None
+
+
 def status_key(v: Mapping[str, Any], today: date) -> str:
     if v["state"] == "archived":
         return "archiviert"
     if v["state"] == "redeemed":
         return "eingeloest"
+    if _gift_status(v) == "claimed":
+        return "weitergegeben"
     if v["expires_on"] and v["expires_on"] < today.isoformat():
         return "abgelaufen"
     value, rest = v["value_cents"], v["remaining_cents"]
@@ -300,7 +311,7 @@ def to_view(v: Mapping[str, Any], today: date) -> Dict[str, Any]:
         remaining_text=formatting.format_euro(v["remaining_cents"]),
         expires_text=formatting.format_date(v["expires_on"]),
         expiry_text=formatting.expiry_text(v["expires_on"], today),
-        urgency=formatting.urgency(v["expires_on"], today, key in ("eingeloest", "archiviert")),
+        urgency=formatting.urgency(v["expires_on"], today, key in ("eingeloest", "archiviert", "weitergegeben")),
         is_open=key in ("aktiv", "teilweise"),
     )
     return view
@@ -359,10 +370,20 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+# Status der jüngsten Weitergabe (open, claimed, revoked, expired). Offen und abgelaufen gilt als expired.
+GIFT_STATUS_SQL = (
+    "(SELECT CASE WHEN g.status = 'open' AND g.expires_at <= CAST(strftime('%s', 'now') AS INTEGER) "
+    "THEN 'expired' ELSE g.status END FROM voucher_gifts g WHERE g.voucher_id = v.id "
+    "ORDER BY g.id DESC LIMIT 1)"
+)
+
 _SELECT = (
     "SELECT v.*, u.display_name AS owner_name, "
     "(SELECT COUNT(*) FROM voucher_attachments a WHERE a.voucher_id = v.id) AS attachment_count, "
-    "(SELECT updated_at FROM voucher_logos l WHERE l.voucher_id = v.id) AS logo_version "
+    "(SELECT updated_at FROM voucher_logos l WHERE l.voucher_id = v.id) AS logo_version, "
+    + GIFT_STATUS_SQL + " AS gift_status, "
+    "(SELECT g.recipient_count FROM voucher_gifts g WHERE g.voucher_id = v.id "
+    "ORDER BY g.id DESC LIMIT 1) AS gift_recipients "
     "FROM vouchers v LEFT JOIN users u ON u.id = v.owner_user_id"
 )
 
@@ -470,6 +491,8 @@ def redeem_amount(db: sqlite3.Connection, voucher_id: int, amount_cents: int) ->
         "UPDATE vouchers SET remaining_cents = ?, state = ?, updated_at = ? WHERE id = ?",
         (remaining, "redeemed" if remaining == 0 else "open", _now_iso(), voucher_id),
     )
+    if remaining == 0:
+        gifts.revoke_open(db, voucher_id)  # komplett eingelöst: Weitergabe-Links erlöschen
     return None
 
 
@@ -496,4 +519,6 @@ def apply_state_action(db: sqlite3.Connection, voucher_id: int, action: str) -> 
         "UPDATE vouchers SET state = ?, remaining_cents = ?, updated_at = ? WHERE id = ?",
         (state, remaining, _now_iso(), voucher_id),
     )
+    if state in ("redeemed", "archived"):
+        gifts.revoke_open(db, voucher_id)  # erledigt oder archiviert: Weitergabe-Links erlöschen
     return True

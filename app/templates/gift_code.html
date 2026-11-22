@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Dein Gutschein') }} – Gutscheinkontor{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>{{ _('Der Gutschein gehört dir') }}</h1>
+  <div class="gift-box">
+    {% if logo %}<img class="detail-logo" src="{{ logo }}" alt="" width="48" height="48">{% endif %}
+    <h2>{{ v.title }}</h2>
+    <ul class="gift-facts">{% for line in facts %}<li>{{ line }}</li>{% endfor %}</ul>
+  </div>
+  {% if gift.message %}<blockquote class="gift-message">{{ gift.message }}</blockquote>{% endif %}
+
+  <h2>{{ _('Code') }}</h2>
+  {% if not code_readable %}
+    <p class="alert">{{ _('Der Code ist nicht lesbar. Bitte frage die Person, die dir den Gutschein geschickt hat.') }}</p>
+  {% elif code %}
+    <p><code id="voucher-code" class="voucher-code">{{ code }}</code>
+    <button type="button" class="btn btn-secondary" data-copy="voucher-code" data-done="{{ _('Kopiert') }}">{{ _('Kopieren') }}</button></p>
+  {% else %}
+    <p class="muted">{{ _('Zu diesem Gutschein gibt es keinen Code.') }}</p>
+  {% endif %}
+
+  <div class="actions">
+    <a class="btn" href="/gift/{{ token }}/pdf">{{ _('Als PDF speichern') }}</a>
+  </div>
+
+  {% if files %}
+  <h2>{{ _('Anhänge') }}</h2>
+  <ul class="attachments">
+    {% for f in files %}<li><a href="/gift/{{ token }}/files/{{ f.id }}">{{ f.original_name }}</a></li>{% endfor %}
+  </ul>
+  {% endif %}
+  <p class="muted">{{ _('Diese Seite bleibt über deinen Link bis') }} {{ until }} {{ _('erreichbar. Speichere den Code oder das PDF, wenn du ihn länger brauchst.') }}</p>
+</section>
+{% endblock %}
+{% block scripts %}<script src="/static/vouchers.js" defer></script>{% endblock %}

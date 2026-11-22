@@ -25,11 +25,13 @@ class Redirect(Exception):
         self.url = url
 
 
-def render(request: Request, name: str, status_code: int = 200, **context):
+def render(request: Request, name: str, status_code: int = 200, headers=None, **context):
     context.setdefault("csrf", getattr(request.state, "csrf", ""))
     context.setdefault("user", getattr(request.state, "user", None))
     context.setdefault("mail_enabled", mail.is_enabled())
     response = templates.TemplateResponse(request, name, context, status_code=status_code)
     # Seiten mit Formularen oder persönlichen Daten nicht zwischenspeichern.
     response.headers["Cache-Control"] = "no-store"
+    for key, value in (headers or {}).items():
+        response.headers[key] = value
     return response

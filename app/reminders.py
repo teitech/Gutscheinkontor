@@ -11,6 +11,7 @@ Regeln:
 - Empfänger: die Person, der der Gutschein zugeordnet ist. Ohne Zuordnung alle Nutzer.
   Wer Erinnerungen abgeschaltet hat, bekommt nichts.
 - Mehrere Gutscheine für denselben Empfänger gehen in einer Sammelmail raus.
+- Weitergegebene (übernommene oder verschenkte) Gutscheine bekommen keine Erinnerung.
 - Der Gutscheincode steht nie in der Mail.
 - Jede Mail wird erst vermerkt, wenn der Mailserver sie angenommen hat. Sonst klappt der
   nächste Lauf wieder.
@@ -27,7 +28,7 @@ from zoneinfo import ZoneInfo
 
 from starlette.concurrency import run_in_threadpool
 
-from . import formatting, mail, vouchers
+from . import formatting, gifts, mail, vouchers
 from .config import get_settings
 from .db import connect, transaction
 
@@ -67,7 +68,8 @@ def pending(db: sqlite3.Connection, today: date, stages: Tuple[int, ...]):
     rows = db.execute(
         "SELECT id, title, expires_on, expiry_set_on, remaining_cents, owner_user_id, "
         "kind, percent, benefit_text, min_order_cents, shop_url, online_only "
-        "FROM vouchers WHERE state = 'open' AND expires_on IS NOT NULL"
+        "FROM vouchers WHERE state = 'open' AND expires_on IS NOT NULL "
+        "AND NOT EXISTS (SELECT 1 FROM voucher_gifts g WHERE g.voucher_id = vouchers.id AND g.status = 'claimed')"
     ).fetchall()
     for v in rows:
         expires = date.fromisoformat(v["expires_on"])
@@ -189,6 +191,14 @@ def run_once(now: Optional[datetime] = None) -> int:
     return sent
 
 
+def _sweep_gifts() -> None:
+    db = connect()
+    try:
+        gifts.sweep(db)
+    finally:
+        db.close()
+
+
 async def scheduler(stop: asyncio.Event, tick: float = TICK_SECONDS) -> None:
     """Prüft regelmäßig auf fällige Erinnerungen, bis `stop` gesetzt wird."""
     if not mail.is_enabled():
@@ -196,6 +206,7 @@ async def scheduler(stop: asyncio.Event, tick: float = TICK_SECONDS) -> None:
         return
     while not stop.is_set():
         try:
+            await run_in_threadpool(_sweep_gifts)
             await run_in_threadpool(run_once)
         except Exception as exc:  # noqa: BLE001 - der Planer darf nie abstürzen
             logger.error("Erinnerungslauf fehlgeschlagen (%s).", type(exc).__name__)

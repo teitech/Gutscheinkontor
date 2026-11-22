@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Gutschein nicht mehr verfügbar') }} – Gutscheinkontor{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>{{ _('Dieser Gutschein ist nicht mehr verfügbar') }}</h1>
+  <p>{{ _('Der Link ist abgelaufen oder ungültig, oder jemand anderes hat den Gutschein schon übernommen.') }}</p>
+  <p class="muted">{{ _('Wenn du den Gutschein gern gehabt hättest, sprich die Person an, die ihn dir geschickt hat.') }}</p>
+</section>
+{% endblock %}
