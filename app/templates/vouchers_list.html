@@ -63,7 +63,7 @@
     <a class="voucher-card" href="/vouchers/{{ v.id }}">
       <span class="voucher-title">{% if v.logo_version %}<img class="voucher-logo" src="/vouchers/{{ v.id }}/logo?v={{ v.logo_version }}" alt="" width="32" height="32" loading="lazy">{% endif %}{{ v.title }}</span>
       <span class="voucher-amount">
-        {% if v.kind != 'amount' %}{{ v.benefit_label }}
+        {% if v.kind != 'amount' %}{{ v.benefit_label }}{% if v.multi_use %} <span class="muted">({{ v.uses_left }}/{{ v.uses_total }})</span>{% endif %}
         {% elif v.value_cents is not none %}
           {% if v.status_key == 'teilweise' %}{{ v.remaining_text }} <span class="muted">{{ _('von') }} {{ v.value_text }}</span>
           {% elif v.status_key == 'eingeloest' %}<span class="muted">{{ v.value_text }}</span>

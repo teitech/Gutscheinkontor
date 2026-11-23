@@ -49,6 +49,12 @@
       {% if errors.benefit_text %}<span class="field-error">{{ errors.benefit_text }}</span>{% endif %}
     </label>
 
+    <label data-kind="percent" data-kind2="other">{{ _('Wie oft einlösbar?') }}
+      <input type="text" name="uses" value="{{ form.uses or '1' }}" inputmode="numeric" maxlength="2" placeholder="1">
+      <span class="hint">{{ _('Normalerweise 1. Mehr, wenn derselbe Code mehrmals gilt, zum Beispiel bei Freunde-werben-Gutscheinen.') }}</span>
+      {% if errors.uses %}<span class="field-error">{{ errors.uses }}</span>{% endif %}
+    </label>
+
     <label>{{ _('Mindestbestellwert in Euro') }}
       <input type="text" name="min_order" value="{{ form.min_order }}" inputmode="decimal" placeholder="50,00">
       <span class="hint">{{ _('Optional. Der Gutschein gilt erst ab diesem Warenkorbwert.') }}</span>

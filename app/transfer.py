@@ -27,7 +27,7 @@ from .config import get_settings
 from .db import transaction
 
 FORMAT_NAME = "gutscheinkontor-export"
-FORMAT_VERSION = 5  # 2: Art und Mindestbestellwert, 3: Shop-Adresse und "nur online", 4: Logos, 5: Weitergabe-Vermerk
+FORMAT_VERSION = 6  # 2: Art und Mindestbestellwert, 3: Shop-Adresse und "nur online", 4: Logos, 5: Weitergabe-Vermerk, 6: Verwendungen
 JSON_MEMBER = "export.json"
 
 MAX_JSON_BYTES = 20 * 1024 * 1024
@@ -124,6 +124,8 @@ def build_export_zip(db: sqlite3.Connection, include_codes: bool):
                 "min_order_cents": v["min_order_cents"],
                 "shop_url": v["shop_url"],
                 "online_only": bool(v["online_only"]),
+                "uses_total": v["uses_total"],
+                "uses_left": v["uses_left"],
                 "expires_on": v["expires_on"],
                 "state": v["state"],
                 "owner_email": v["owner_email"],
@@ -151,7 +153,7 @@ def build_export_zip(db: sqlite3.Connection, include_codes: bool):
 
 CSV_HEADER = ["Name", "Code", "Art", "Wert", "Restwert", "Prozent", "Vorteil (Text)",
               "Mindestbestellwert", "Nur online", "Shop-Adresse", "Ablaufdatum", "Status", "Zugehörig zu",
-              "Schlagwörter", "Notizen", "Angelegt am"]
+              "Schlagwörter", "Notizen", "Angelegt am", "Verwendungen gesamt", "Verwendungen übrig"]
 
 
 def _csv_safe(text: str) -> str:
@@ -193,6 +195,8 @@ def build_csv(db: sqlite3.Connection, include_codes: bool) -> bytes:
             ", ".join(tags.get(v["id"], [])),
             v["notes"].replace("\r\n", "\n"),
             formatting.format_date(v["created_at"][:10]),
+            str(v["uses_total"]),
+            str(v["uses_left"]),
         ]])
     return b"\xef\xbb\xbf" + out.getvalue().encode("utf-8")
 
@@ -265,6 +269,15 @@ def _percent(value: Any) -> str:
     return str(value)
 
 
+def _uses(value: Any, label: str) -> Optional[int]:
+    """Verwendungen: ganze Zahl, Dateien aus älteren Versionen haben keine."""
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= vouchers.MAX_USES:
+        raise ValueError(f"{label} muss eine ganze Zahl von 0 bis {vouchers.MAX_USES} sein.")
+    return value
+
+
 def _entry_to_form(entry: Dict[str, Any], owners: Dict[str, int]) -> Tuple[Dict[str, str], Optional[str]]:
     """Wandelt einen JSON-Eintrag in Formularfelder, damit dieselbe Prüfung wie in der Oberfläche greift."""
     tags = entry.get("tags", [])
@@ -286,6 +299,7 @@ def _entry_to_form(entry: Dict[str, Any], owners: Dict[str, int]) -> Tuple[Dict[
         "min_order": _cents(entry.get("min_order_cents"), "min_order_cents"),
         "shop_url": _text(entry.get("shop_url"), "shop_url"),
         "online_only": "on" if _flag(entry.get("online_only"), "online_only") else "",
+        "uses": "" if entry.get("uses_total") is None else str(_uses(entry.get("uses_total"), "uses_total")),
         "expires_on": _text(entry.get("expires_on"), "expires_on"),
         "owner": str(owner_id) if owner_id else "",
         "notes": _text(entry.get("notes"), "notes"),
@@ -396,6 +410,11 @@ def _import_entry(db, archive, names, entry, idx, owners, existing, skip_duplica
     except ValueError as exc:
         report.add_invalid(f"{label}: {exc}")
         return
+    try:
+        uses_left = _uses(entry.get("uses_left"), "uses_left")
+    except ValueError as exc:
+        report.add_invalid(f"{label}: {exc}")
+        return
     data, errors = vouchers.validate_form(form, set(owners.values()))
     state = entry.get("state", "open")
     if state not in VALID_STATES:
@@ -421,12 +440,20 @@ def _import_entry(db, archive, names, entry, idx, owners, existing, skip_duplica
             remaining = 0
         elif state == "open" and remaining == 0:
             state = "redeemed"
+    uses = data.uses_total
+    if data.kind != "amount":
+        uses = data.uses_total if uses_left is None else min(uses_left, data.uses_total)
+        if state == "redeemed":
+            uses = 0
+        elif state == "open" and uses == 0:
+            state = "redeemed"
     created_at = entry.get("created_at")
     updated_at = entry.get("updated_at")
     now = vouchers._now_iso()
     db.execute(
-        "UPDATE vouchers SET state = ?, remaining_cents = ?, created_at = ?, updated_at = ? WHERE id = ?",
-        (state, remaining,
+        "UPDATE vouchers SET state = ?, remaining_cents = ?, uses_left = ?, created_at = ?, updated_at = ? "
+        "WHERE id = ?",
+        (state, remaining, uses,
          created_at if isinstance(created_at, str) and TIMESTAMP_RE.match(created_at) else now,
          updated_at if isinstance(updated_at, str) and TIMESTAMP_RE.match(updated_at) else now,
          voucher_id),

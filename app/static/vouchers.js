@@ -19,7 +19,7 @@ document.addEventListener("DOMContentLoaded", function () {
   if (!select) return;
   function update() {
     document.querySelectorAll("[data-kind]").forEach(function (el) {
-      el.hidden = el.getAttribute("data-kind") !== select.value;
+      el.hidden = el.getAttribute("data-kind") !== select.value && el.getAttribute("data-kind2") !== select.value;
     });
   }
   select.addEventListener("change", update);

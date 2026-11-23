@@ -19,7 +19,7 @@ settings = get_settings()
 
 UPLOAD_OVERHEAD = 64 * 1024  # Platz für Formularfelder und Multipart-Rahmen
 FORM_FIELDS = ("title", "code", "kind", "value", "remaining", "percent", "benefit_text", "min_order",
-               "shop_url", "online_only", "expires_on", "owner", "notes", "tags")
+               "shop_url", "online_only", "uses", "expires_on", "owner", "notes", "tags")
 
 
 # --- Hilfsfunktionen -----------------------------------------------------------
@@ -142,7 +142,7 @@ def create(
     title: str = Form(""), code: str = Form(""), value: str = Form(""),
     remaining: str = Form(""), kind: str = Form("amount"), percent: str = Form(""),
     benefit_text: str = Form(""), min_order: str = Form(""),
-    shop_url: str = Form(""), online_only: str = Form(""),
+    shop_url: str = Form(""), online_only: str = Form(""), uses: str = Form("1"),
     expires_on: str = Form(""), owner: str = Form(""),
     notes: str = Form(""), tags: str = Form(""), csrf_token: str = Form(""),
     ctx=Depends(require_active), db: sqlite3.Connection = Depends(get_db),
@@ -151,7 +151,7 @@ def create(
     _, user = ctx
     form = dict(title=title, code=code, value=value, remaining=remaining, kind=kind,
                 percent=percent, benefit_text=benefit_text, min_order=min_order,
-                shop_url=shop_url, online_only=online_only,
+                shop_url=shop_url, online_only=online_only, uses=uses,
                 expires_on=expires_on, owner=owner, notes=notes, tags=tags)
     data, errors = vouchers.validate_form(form, {o["id"] for o in _owners(db)})
     if data is None:
@@ -173,7 +173,7 @@ def edit_form(request: Request, voucher_id: int, ctx=Depends(require_active),
         remaining=_money_input(voucher["remaining_cents"]), kind=voucher["kind"],
         percent=str(voucher["percent"] or ""), benefit_text=voucher["benefit_text"],
         min_order=_money_input(voucher["min_order_cents"]),
-        shop_url=voucher["shop_url"], online_only="on" if voucher["online_only"] else "", expires_on=voucher["expires_on"] or "",
+        shop_url=voucher["shop_url"], online_only="on" if voucher["online_only"] else "", uses=str(voucher["uses_total"]), expires_on=voucher["expires_on"] or "",
         owner=str(voucher["owner_user_id"] or ""), notes=voucher["notes"],
         tags=", ".join(voucher["tags"]),
     )
@@ -186,7 +186,7 @@ def edit_submit(
     title: str = Form(""), code: str = Form(""), value: str = Form(""),
     remaining: str = Form(""), kind: str = Form("amount"), percent: str = Form(""),
     benefit_text: str = Form(""), min_order: str = Form(""),
-    shop_url: str = Form(""), online_only: str = Form(""),
+    shop_url: str = Form(""), online_only: str = Form(""), uses: str = Form("1"),
     expires_on: str = Form(""), owner: str = Form(""),
     notes: str = Form(""), tags: str = Form(""), csrf_token: str = Form(""),
     ctx=Depends(require_active), db: sqlite3.Connection = Depends(get_db),
@@ -197,7 +197,7 @@ def edit_submit(
         raise HTTPException(status_code=404)
     form = dict(title=title, code=code, value=value, remaining=remaining, kind=kind,
                 percent=percent, benefit_text=benefit_text, min_order=min_order,
-                shop_url=shop_url, online_only=online_only,
+                shop_url=shop_url, online_only=online_only, uses=uses,
                 expires_on=expires_on, owner=owner, notes=notes, tags=tags)
     data, errors = vouchers.validate_form(form, {o["id"] for o in _owners(db)})
     if data is None:

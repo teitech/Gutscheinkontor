@@ -132,7 +132,7 @@ def test_rundreise_mit_neuen_feldern(me):
     create_id(me, title="Drogerie", kind="percent", percent="10", min_order="50")
     create_id(me, title="Pizza", kind="other", benefit_text="Gratis Getränk")
     content, document = exported(me)
-    assert document["format_version"] == 5
+    assert document["format_version"] == 6
     by_title = {v["title"]: v for v in document["vouchers"]}
     assert by_title["Drogerie"]["kind"] == "percent" and by_title["Drogerie"]["percent"] == 10
     assert by_title["Drogerie"]["min_order_cents"] == 5000

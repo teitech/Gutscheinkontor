@@ -18,6 +18,7 @@
     <dt>{{ _('Wert') }}</dt><dd>{{ v.value_text }}</dd>
     <dt>{{ _('Restwert') }}</dt><dd><strong>{{ v.remaining_text }}</strong></dd>
     {% endif %}
+    {% if v.multi_use %}<dt>{{ _('Verwendungen') }}</dt><dd><strong>{{ v.uses_left }} {{ _('von') }} {{ v.uses_total }} {{ _('übrig') }}</strong></dd>{% endif %}
     {% if v.min_order_cents is not none %}<dt>{{ _('Mindestbestellwert') }}</dt><dd>{{ v.min_order_text }}</dd>{% endif %}
     {% if v.online_only or v.shop_url %}
     <dt>{{ _('Einlösen') }}</dt>
@@ -46,6 +47,13 @@
 
   <div class="actions">
     <a class="btn" href="/vouchers/{{ v.id }}/edit">{{ _('Bearbeiten') }}</a>
+    {% if v.state == 'open' and v.multi_use %}
+    <form method="post" action="/vouchers/{{ v.id }}/state">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      <input type="hidden" name="action" value="use_once">
+      <button class="btn" type="submit">{{ _('Einmal verwendet') }}</button>
+    </form>
+    {% endif %}
     {% if v.state == 'open' %}
     <form method="post" action="/vouchers/{{ v.id }}/state">
       <input type="hidden" name="csrf_token" value="{{ csrf }}">

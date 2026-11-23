@@ -21,6 +21,7 @@ Die Beispieldaten in den Bildern sind erfunden.
 ## Funktionen
 
 - Gutscheine mit Ablaufdatum, Wert oder Prozent-Rabatt, Mindestbestellwert, Restwert, Schlagwörtern, Notizen und Anhängen, Code verschlüsselt gespeichert
+- Mehrfach einlösbare Gutscheine (Prozent und Freitext): Zähler „2 von 3 übrig“, z. B. für Freunde-werben-Codes
 - Gutscheine weitergeben: per Mail-Link an mehrere Personen (wer zuerst übernimmt, bekommt ihn), als PDF oder als „verschenkt“ vermerkt
 - Erinnerungsmails vor dem Ablauf (standardmäßig 30, 7 und 1 Tag vorher)
 - Mehrere Nutzer (z. B. Familie) mit gemeinsamem Bestand, Einladung per Link

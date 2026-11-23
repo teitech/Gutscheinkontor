@@ -36,7 +36,9 @@ FILTER_OPTIONS = [
     ("alle", "Alle"),
 ]
 SORT_OPTIONS = [("ablauf", "Ablaufdatum"), ("neu", "Zuletzt hinzugefügt"), ("titel", "Name")]
-STATE_ACTIONS = ("redeem_all", "reopen", "archive", "unarchive")
+STATE_ACTIONS = ("redeem_all", "use_once", "reopen", "archive", "unarchive")
+MAX_USES = 99
+USES_HINT = f"Bitte gib eine ganze Zahl von 1 bis {MAX_USES} an."
 
 MAX_VALUE_CENTS = 1_000_000 * 100
 MAX_TAGS = 10
@@ -159,6 +161,7 @@ class VoucherData:
     min_order_cents: Optional[int] = None
     shop_url: str = ""
     online_only: bool = False
+    uses_total: int = 1
 
 
 def validate_form(
@@ -212,6 +215,14 @@ def validate_form(
         elif len(benefit_text) > MAX_BENEFIT_LENGTH:
             errors["benefit_text"] = f"Höchstens {MAX_BENEFIT_LENGTH} Zeichen."
 
+    uses_total = 1
+    if kind != "amount":  # Mehrfach einlösbar sind nur Prozent und Freitext
+        uses_text = form.get("uses", "").strip() or "1"
+        if not re.fullmatch(r"\d{1,2}", uses_text) or not 1 <= int(uses_text) <= MAX_USES:
+            errors["uses"] = USES_HINT
+        else:
+            uses_total = int(uses_text)
+
     min_order = None
     try:
         min_order = parse_money(form.get("min_order", "")) or None  # 0 bedeutet: kein Mindestwert
@@ -253,7 +264,7 @@ def validate_form(
         return None, errors
     return (
         VoucherData(title, code, value, remaining, expires_on, owner, notes, tags,
-                    kind, percent, benefit_text, min_order, shop_url, online_only),
+                    kind, percent, benefit_text, min_order, shop_url, online_only, uses_total),
         errors,
     )
 
@@ -279,6 +290,8 @@ def status_key(v: Mapping[str, Any], today: date) -> str:
         return "abgelaufen"
     value, rest = v["value_cents"], v["remaining_cents"]
     if value is not None and rest is not None and 0 < rest < value:
+        return "teilweise"
+    if v["kind"] != "amount" and 0 < v["uses_left"] < v["uses_total"]:
         return "teilweise"
     return "aktiv"
 
@@ -313,6 +326,7 @@ def to_view(v: Mapping[str, Any], today: date) -> Dict[str, Any]:
         expiry_text=formatting.expiry_text(v["expires_on"], today),
         urgency=formatting.urgency(v["expires_on"], today, key in ("eingeloest", "archiviert", "weitergegeben")),
         is_open=key in ("aktiv", "teilweise"),
+        multi_use=v["kind"] != "amount" and v["uses_total"] > 1,
     )
     return view
 
@@ -435,13 +449,13 @@ def create_voucher(db: sqlite3.Connection, data: VoucherData, created_by: int) -
     cur = db.execute(
         "INSERT INTO vouchers (title, code_enc, value_cents, remaining_cents, expires_on, state, "
         "owner_user_id, notes, created_by, created_at, updated_at, expiry_set_on, "
-        "kind, percent, benefit_text, min_order_cents, shop_url, online_only) "
-        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        "kind, percent, benefit_text, min_order_cents, shop_url, online_only, uses_total, uses_left) "
+        "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
         (data.title, security.encrypt(data.code) if data.code else None, data.value_cents,
          data.remaining_cents, data.expires_on, state, data.owner_user_id, data.notes,
          created_by, now, now, dates.today().isoformat(),
          data.kind, data.percent, data.benefit_text, data.min_order_cents,
-         data.shop_url, int(data.online_only)),
+         data.shop_url, int(data.online_only), data.uses_total, data.uses_total),
     )
     set_tags(db, cur.lastrowid, data.tags)
     return cur.lastrowid
@@ -449,11 +463,19 @@ def create_voucher(db: sqlite3.Connection, data: VoucherData, created_by: int) -
 
 def update_voucher(db: sqlite3.Connection, voucher_id: int, data: VoucherData) -> bool:
     current = db.execute(
-        "SELECT state, expires_on, expiry_set_on FROM vouchers WHERE id = ?", (voucher_id,)
+        "SELECT state, expires_on, expiry_set_on, uses_total, uses_left FROM vouchers WHERE id = ?",
+        (voucher_id,)
     ).fetchone()
     if current is None:
         return False
     state = _state_after_edit(current["state"], data.value_cents, data.remaining_cents)
+    # Verbrauchte Verwendungen bleiben verbraucht: übrig = neue Gesamtzahl - schon genutzte.
+    uses_left = max(0, data.uses_total - (current["uses_total"] - current["uses_left"]))
+    if data.kind != "amount":
+        if state == "open" and uses_left == 0:
+            state = "redeemed"
+        elif state == "redeemed":
+            uses_left = 0  # eingelöst bleibt eingelöst, nur "Wieder öffnen" macht ihn wieder nutzbar
     # Wird das Ablaufdatum geändert, zählen die Erinnerungsstufen ab heute neu.
     expiry_set_on = current["expiry_set_on"]
     if data.expires_on != current["expires_on"]:
@@ -461,11 +483,13 @@ def update_voucher(db: sqlite3.Connection, voucher_id: int, data: VoucherData) -
     db.execute(
         "UPDATE vouchers SET title=?, code_enc=?, value_cents=?, remaining_cents=?, expires_on=?, "
         "state=?, owner_user_id=?, notes=?, updated_at=?, expiry_set_on=?, "
-        "kind=?, percent=?, benefit_text=?, min_order_cents=?, shop_url=?, online_only=? WHERE id=?",
+        "kind=?, percent=?, benefit_text=?, min_order_cents=?, shop_url=?, online_only=?, "
+        "uses_total=?, uses_left=? WHERE id=?",
         (data.title, security.encrypt(data.code) if data.code else None, data.value_cents,
          data.remaining_cents, data.expires_on, state, data.owner_user_id, data.notes,
          _now_iso(), expiry_set_on, data.kind, data.percent, data.benefit_text,
-         data.min_order_cents, data.shop_url, int(data.online_only), voucher_id),
+         data.min_order_cents, data.shop_url, int(data.online_only), data.uses_total, uses_left,
+         voucher_id),
     )
     set_tags(db, voucher_id, data.tags)
     return True
@@ -498,26 +522,37 @@ def redeem_amount(db: sqlite3.Connection, voucher_id: int, amount_cents: int) ->
 
 def apply_state_action(db: sqlite3.Connection, voucher_id: int, action: str) -> bool:
     row = db.execute(
-        "SELECT state, value_cents, remaining_cents FROM vouchers WHERE id = ?", (voucher_id,)
+        "SELECT state, kind, value_cents, remaining_cents, uses_left FROM vouchers WHERE id = ?",
+        (voucher_id,)
     ).fetchone()
     if row is None or action not in STATE_ACTIONS:
         return False
     value, remaining, state = row["value_cents"], row["remaining_cents"], row["state"]
-    if action == "redeem_all":
+    uses_left, counted = row["uses_left"], row["kind"] != "amount"
+    if action == "use_once":
+        if not counted or state != "open" or uses_left < 1:
+            return False
+        uses_left -= 1
+        if uses_left == 0:
+            state = "redeemed"
+    elif action == "redeem_all":
         state = "redeemed"
         if value is not None:
             remaining = 0
+        uses_left = 0
     elif action == "reopen":
         state = "open"
         if value is not None and remaining == 0:
             remaining = value  # Einlösung rückgängig: der volle Wert steht wieder zur Verfügung
+        if uses_left == 0:
+            uses_left = 1  # eine Verwendung steht wieder zur Verfügung
     elif action == "archive":
         state = "archived"
     elif action == "unarchive":
-        state = "redeemed" if value is not None and remaining == 0 else "open"
+        state = "redeemed" if (value is not None and remaining == 0) or (counted and uses_left == 0) else "open"
     db.execute(
-        "UPDATE vouchers SET state = ?, remaining_cents = ?, updated_at = ? WHERE id = ?",
-        (state, remaining, _now_iso(), voucher_id),
+        "UPDATE vouchers SET state = ?, remaining_cents = ?, uses_left = ?, updated_at = ? WHERE id = ?",
+        (state, remaining, uses_left, _now_iso(), voucher_id),
     )
     if state in ("redeemed", "archived"):
         gifts.revoke_open(db, voucher_id)  # erledigt oder archiviert: Weitergabe-Links erlöschen
