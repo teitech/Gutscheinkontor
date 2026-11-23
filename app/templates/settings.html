@@ -26,6 +26,16 @@
   </form>
 
   {% if account.is_admin %}
+  <h2>{{ _('Versandzeit') }}</h2>
+  <p class="muted">{{ _('Gilt für alle Nutzer der Instanz. Die Mails gehen ab dieser vollen Stunde raus (Zeitzone') }} {{ timezone }}).</p>
+  {% if hour_error %}<p class="alert" role="alert">{{ hour_error }}</p>{% endif %}
+  <form method="post" action="/settings/reminder-hour" class="form">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <label for="hour">{{ _('Erinnerungen versenden ab (Uhr)') }}</label>
+    <input id="hour" name="hour" type="number" inputmode="numeric" min="0" max="23" step="1" value="{{ hour }}" required>
+    <div class="actions"><button class="btn" type="submit">{{ _('Speichern') }}</button></div>
+  </form>
+
   <h2>{{ _('Nutzer') }}</h2>
   <p><a href="/users">{{ _('Nutzer einladen und verwalten') }} →</a></p>
   {% endif %}

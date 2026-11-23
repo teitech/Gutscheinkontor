@@ -3,10 +3,10 @@ from __future__ import annotations
 
 import sqlite3
 
-from fastapi import APIRouter, Depends, Form, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
-from . import mail
+from . import mail, reminders
 from .config import get_settings
 from .db import get_db, transaction
 from .ratelimit import limiter
@@ -29,7 +29,7 @@ def _page(request: Request, db: sqlite3.Connection, user_id: int, status_code: i
     return render(
         request, "settings.html", status_code=status_code, account=user,
         mail_enabled=mail.is_enabled(), reminders_on=settings.reminders_enabled,
-        days_text=_days_text(settings.reminder_days), hour=settings.reminder_hour,
+        days_text=_days_text(settings.reminder_days), hour=reminders.reminder_hour(db),
         timezone=settings.timezone, **extra,
     )
 
@@ -51,6 +51,23 @@ def settings_save(
             "UPDATE users SET reminders_enabled = ? WHERE id = ?",
             (1 if reminders == "on" else 0, ctx[1]["id"]),
         )
+    return RedirectResponse("/settings?saved=1", status_code=303)
+
+
+@router.post("/settings/reminder-hour")
+def save_reminder_hour(
+    request: Request, hour: str = Form(""), csrf_token: str = Form(""),
+    ctx=Depends(require_active), db: sqlite3.Connection = Depends(get_db),
+):
+    require_csrf(request, csrf_token)
+    if not ctx[1]["is_admin"]:
+        raise HTTPException(status_code=403, detail="Nur Admins dürfen das ändern.")
+    value = hour.strip()
+    if not (value.isdigit() and len(value) <= 2 and 0 <= int(value) <= 23):
+        return _page(request, db, ctx[1]["id"], status_code=400,
+                     hour_error="Bitte eine volle Stunde von 0 bis 23 angeben.")
+    with transaction(db):
+        reminders.set_reminder_hour(db, int(value))
     return RedirectResponse("/settings?saved=1", status_code=303)
 
 

@@ -349,3 +349,27 @@ def test_testmail_fehler_wird_angezeigt(me, mails, monkeypatch):
     monkeypatch.setattr(mail, "send_mail", lambda *a: False)
     r = post(me, "/settings/test-mail")
     assert r.status_code == 502 and "nicht angenommen" in r.text
+
+
+# --- Versandzeit in den Einstellungen ------------------------------------------------------------
+
+
+def test_versandzeit_aus_den_einstellungen_gilt_vor_der_umgebung(me, mails):
+    make(me, title="Drogerie")
+    assert post(me, "/settings/reminder-hour", hour="10").status_code == 303
+    assert reminders.run_once(at(0, hour=9)) == 0
+    assert reminders.run_once(at(0, hour=10)) == 1
+
+
+def test_versandzeit_null_erlaubt_versand_ab_mitternacht(me, mails):
+    make(me, title="Drogerie")
+    post(me, "/settings/reminder-hour", hour="0")
+    assert reminders.run_once(at(0, hour=0, minute=5)) == 1
+
+
+def test_versandzeit_nur_fuer_admins_und_nur_gueltige_werte(me, mails):
+    for bad in ("24", "-1", "abc", "", "8,5"):
+        r = post(me, "/settings/reminder-hour", hour=bad)
+        assert r.status_code == 400 and "von 0 bis 23" in r.text
+    assert db_rows("SELECT COUNT(*) AS n FROM app_settings")[0]["n"] == 0
+    assert "Versandzeit" in me.get("/settings").text

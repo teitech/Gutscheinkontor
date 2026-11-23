@@ -164,19 +164,35 @@ def _unclaim(db: sqlite3.Connection, user_id: int, items: List[Item]) -> None:
             )
 
 
+def reminder_hour(db: sqlite3.Connection) -> int:
+    """Versand ab dieser Stunde: der Wert aus den Einstellungen, sonst REMINDER_HOUR."""
+    row = db.execute("SELECT value FROM app_settings WHERE key = 'reminder_hour'").fetchone()
+    try:
+        hour = int(row[0]) if row else get_settings().reminder_hour
+    except ValueError:
+        return get_settings().reminder_hour
+    return hour if 0 <= hour <= 23 else get_settings().reminder_hour
+
+
+def set_reminder_hour(db: sqlite3.Connection, hour: int) -> None:
+    db.execute(
+        "INSERT INTO app_settings (key, value) VALUES ('reminder_hour', ?) "
+        "ON CONFLICT(key) DO UPDATE SET value = excluded.value", (str(hour),))
+
+
 def run_once(now: Optional[datetime] = None) -> int:
     """Ein Prüflauf. Gibt die Zahl der verschickten Mails zurück."""
     settings = get_settings()
     if not settings.reminders_enabled or not mail.is_enabled():
         return 0
     now = now or datetime.now(ZoneInfo(settings.timezone))
-    if now.hour < settings.reminder_hour:
-        return 0
     today = now.date()
 
     sent = 0
     db = connect()
     try:
+        if now.hour < reminder_hour(db):
+            return 0
         for user_id, (user, items) in pending(db, today, settings.reminder_days).items():
             claimed = _claim(db, user_id, items)
             if not claimed:

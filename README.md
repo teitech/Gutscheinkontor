@@ -111,7 +111,7 @@ Datenschutz: Die Adressen der Empfänger werden gelöscht, sobald die Weitergabe
 
 ## Erinnerungen
 
-Die App schickt Mails vor dem Ablauf, standardmäßig 30, 7 und 1 Tag vorher (`REMINDER_DAYS`), ab 8 Uhr morgens (`REMINDER_HOUR`, Zeitzone `TIMEZONE`). Sie braucht dafür den SMTP-Versand und läuft als Hintergrundaufgabe im selben Prozess. Unter „Einstellungen“ gibt es eine Testmail, mit der du den Versand prüfst.
+Die App schickt Mails vor dem Ablauf, standardmäßig 30, 7 und 1 Tag vorher (`REMINDER_DAYS`), ab 8 Uhr morgens (Zeitzone `TIMEZONE`). Die Uhrzeit können Admins unter „Einstellungen“ ändern. Ohne eigene Angabe gilt `REMINDER_HOUR`. Sie braucht dafür den SMTP-Versand und läuft als Hintergrundaufgabe im selben Prozess. Unter „Einstellungen“ gibt es eine Testmail, mit der du den Versand prüfst.
 
 - **Eine Mail pro Stufe:** Für jeden Gutschein, jede Person und jede Stufe kommt höchstens eine Mail. Mehrere Gutscheine für dieselbe Person landen in einer Sammelmail.
 - **Nach einer Pause:** War die App aus, kommt nach dem Start nur die aktuelle Stufe, kein Schwall verpasster Mails.
